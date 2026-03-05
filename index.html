@@ -23,7 +23,6 @@
       width: calc(100% - 380px);
     }
 
-    /* HUD Top Bar */
     #hud-top {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -63,7 +62,6 @@
       display: block;
     }
 
-    /* HUD Bottom Bar */
     #hud-bottom {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -97,7 +95,6 @@
     .dot.red { background: #ff3333; box-shadow: 0 0 4px #ff3333; }
     .dot.amber { background: #ffaa00; }
 
-    /* Country Panel */
     #country-panel {
       position: fixed;
       top: 0; left: -380px;
@@ -114,7 +111,6 @@
 
     #country-panel.open { left: 0; }
 
-    /* Panel Header */
     .panel-header {
       padding: 56px 20px 20px;
       border-bottom: 1px solid #0d2a1a;
@@ -181,7 +177,6 @@
 
     .close-btn:hover { border-color: #ff3333; color: #ff3333; }
 
-    /* Stability Bar */
     .stability-row {
       display: flex;
       align-items: center;
@@ -222,7 +217,6 @@
       flex-shrink: 0;
     }
 
-    /* Panel Sections */
     .panel-section {
       padding: 14px 20px;
       border-bottom: 1px solid #0d2a1a;
@@ -247,7 +241,6 @@
       background: #0d2a1a;
     }
 
-    /* Stat Grid */
     .stat-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -283,7 +276,6 @@
     .stat-value.amber { color: #ffaa00; }
     .stat-value.red { color: #ff3333; }
 
-    /* Military Rating */
     .military-rating {
       display: flex;
       align-items: center;
@@ -356,7 +348,6 @@
       text-transform: uppercase;
     }
 
-    /* Alliance Badges */
     .alliance-row {
       display: flex;
       flex-wrap: wrap;
@@ -379,7 +370,6 @@
       background: #1a0505;
     }
 
-    /* Nuclear Warning */
     .nuclear-warning {
       display: flex;
       align-items: center;
@@ -408,7 +398,6 @@
       letter-spacing: 1px;
     }
 
-    /* News Items */
     .news-item {
       display: flex;
       gap: 8px;
@@ -448,7 +437,6 @@
       letter-spacing: 1px;
     }
 
-    /* Loading state */
     .loading {
       font-family: 'Share Tech Mono', monospace;
       font-size: 10px;
@@ -462,7 +450,6 @@
 </head>
 <body>
 
-  <!-- HUD Top -->
   <div id="hud-top">
     <div class="hud-logo">MERIDIAN <span>// GLOBAL INTELLIGENCE</span></div>
     <div class="hud-right">
@@ -471,10 +458,8 @@
     </div>
   </div>
 
-  <!-- Map -->
   <div id="map"></div>
 
-  <!-- Country Panel -->
   <div id="country-panel">
     <div class="panel-header">
       <div class="panel-country-row">
@@ -496,7 +481,6 @@
       </div>
     </div>
 
-    <!-- Key Stats -->
     <div class="panel-section">
       <div class="section-title">Key Data</div>
       <div class="stat-grid">
@@ -519,7 +503,6 @@
       </div>
     </div>
 
-    <!-- Military -->
     <div class="panel-section">
       <div class="section-title">Military Capability</div>
       <div class="military-rating">
@@ -551,13 +534,11 @@
       </div>
     </div>
 
-    <!-- Alliances -->
     <div class="panel-section">
       <div class="section-title">Alliances & Blocs</div>
       <div class="alliance-row" id="alliance-row">—</div>
     </div>
 
-    <!-- Political -->
     <div class="panel-section">
       <div class="section-title">Political</div>
       <div class="stat-grid">
@@ -572,7 +553,6 @@
       </div>
     </div>
 
-    <!-- News -->
     <div class="panel-section" id="news-section">
       <div class="section-title">Top Stories</div>
       <div id="news-container">
@@ -582,7 +562,6 @@
 
   </div>
 
-  <!-- HUD Bottom -->
   <div id="hud-bottom">
     <div class="status-item"><span class="dot green"></span> FEEDS NOMINAL</div>
     <div class="status-item"><span class="dot red"></span> ACTIVE CONFLICTS: 14</div>
@@ -590,7 +569,6 @@
   </div>
 
   <script>
-    // Clock
     function updateClock() {
       const now = new Date();
       const h = String(now.getUTCHours()).padStart(2,'0');
@@ -601,7 +579,6 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Map
     const map = L.map('map', {
       center: [20, 0],
       zoom: 2,
@@ -615,7 +592,6 @@
       subdomains: 'abcd'
     }).addTo(map);
 
-    // Panel controls
     function openPanel() {
       document.getElementById('country-panel').classList.add('open');
       document.getElementById('map').classList.add('panel-open');
@@ -626,17 +602,19 @@
       document.getElementById('map').classList.remove('panel-open');
     }
 
-    // Country click handler
     function onCountryClick(feature) {
       const name = feature.properties.ADMIN;
-      const iso = (feature.properties.ISO_A2 && feature.properties.ISO_A2 !== '-99') ? feature.properties.ISO_A2.toLowerCase() : feature.properties.ISO_A3.toLowerCase();
+      const rawIso = feature.properties.ISO_A2;
+      const iso = (rawIso && rawIso !== '-99') ? rawIso.toLowerCase() : (feature.properties.ISO_A3 ? feature.properties.ISO_A3.toLowerCase() : null);
 
-      // Set flag and name
+      if (!iso) {
+        console.warn('No ISO code for:', name);
+        return;
+      }
+
       document.getElementById('panel-flag').src = `https://flagcdn.com/w160/${iso}.png`;
       document.getElementById('panel-name').textContent = name.toUpperCase();
-      document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // CLICK FOR INTELLIGENCE`;
-
-      // Reset fields
+      document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // FETCHING DATA...`;
       document.getElementById('stability-bar').style.width = '0%';
       document.getElementById('stability-val').textContent = '—';
       document.getElementById('stat-pop').textContent = '—';
@@ -656,39 +634,35 @@
 
       openPanel();
 
-      // Fetch country data from REST Countries API
       fetch(`https://restcountries.com/v3.1/alpha/${iso}`)
         .then(res => res.json())
         .then(data => {
           const country = data[0];
 
-          // Population
           const pop = country.population;
           document.getElementById('stat-pop').textContent =
             pop > 1000000 ? (pop/1000000).toFixed(1) + 'M' : (pop/1000).toFixed(0) + 'K';
 
-          // Region
           document.getElementById('panel-sub').textContent =
-            `${iso.toUpperCase()} // ${country.region.toUpperCase()} // ${country.subregion ? country.subregion.toUpperCase() : ''}`;
+            `${iso.toUpperCase()} // ${country.region.toUpperCase()}${country.subregion ? ' // ' + country.subregion.toUpperCase() : ''}`;
 
-          // Government
           document.getElementById('pol-gov').textContent = 'See Wikipedia';
 
-          // Alliances placeholder
+          const natoMembers = ['us','gb','fr','de','it','es','pl','nl','be','pt','no','dk','is','ca','tr','gr','cz','hu','ro','bg','hr','sk','si','ee','lv','lt','al','me','mk','ba','fi','se'];
           const alliances = ['UN MEMBER'];
-          if (['us','gb','fr','de','it','es','pl','nl','be','pt','no','dk','is','ca','tr','gr','cz','hu','ro','bg','hr','sk','si','ee','lv','lt','al','me','mk','ba','fi','se'].includes(iso)) {
-            alliances.push('NATO');
-          }
+          if (natoMembers.includes(iso)) alliances.push('NATO');
+
           document.getElementById('alliance-row').innerHTML =
             alliances.map(a => `<span class="alliance-badge">${a}</span>`).join('');
 
+          document.getElementById('news-container').innerHTML =
+            '<div class="loading">// NEWS API COMING IN PHASE 4</div>';
         })
         .catch(() => {
           document.getElementById('panel-sub').textContent = 'DATA UNAVAILABLE';
         });
     }
 
-    // Load country boundaries
     fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
       .then(res => res.json())
       .then(data => {
