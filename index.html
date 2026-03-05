@@ -603,9 +603,9 @@
     }
 
     function onCountryClick(feature) {
-      const name = feature.properties.ADMIN;
-      const rawIso = feature.properties.ISO_A2;
-      const iso = (rawIso && rawIso !== '-99') ? rawIso.toLowerCase() : (feature.properties.ISO_A3 ? feature.properties.ISO_A3.toLowerCase() : null);
+      const name = feature.properties.name;
+      const rawIso = feature.properties['ISO3166-1-Alpha-2'];
+      const iso = (rawIso && rawIso !== '-99') ? rawIso.toLowerCase() : (feature.properties['ISO3166-1-Alpha-3'] ? feature.properties['ISO3166-1-Alpha-3'].toLowerCase() : null);
 
       if (!iso) {
         console.warn('No ISO code for:', name);
