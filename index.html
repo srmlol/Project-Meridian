@@ -604,7 +604,8 @@
 
     function onCountryClick(feature) {
       const name = feature.properties.name;
-      const rawIso = feature.properties['ISO3166-1-Alpha-2'];
+      const manualFix = { 'France': 'fr', 'Norway': 'no', 'Kosovo': 'xk' };
+const rawIso = manualFix[feature.properties.name] || feature.properties['ISO3166-1-Alpha-2'];
       const iso = (rawIso && rawIso !== '-99') ? rawIso.toLowerCase() : (feature.properties['ISO3166-1-Alpha-3'] ? feature.properties['ISO3166-1-Alpha-3'].toLowerCase() : null);
 
       if (!iso) {
