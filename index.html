@@ -6,15 +6,602 @@
   <title>Project Meridian</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #040d12; font-family: Arial, sans-serif; }
-    #map { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+    body { background: #040d12; font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+
+    #map {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      transition: left 0.3s ease, width 0.3s ease;
+    }
+
+    #map.panel-open {
+      left: 380px;
+      width: calc(100% - 380px);
+    }
+
+    /* HUD Top Bar */
+    #hud-top {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: linear-gradient(180deg, #020a0f 0%, transparent 100%);
+      border-bottom: 1px solid #0d2a1a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .hud-logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 900;
+      color: #00ff88;
+      letter-spacing: 4px;
+      text-shadow: 0 0 20px #00ff88;
+    }
+
+    .hud-logo span { color: #5a8070; font-weight: 400; }
+
+    .hud-right {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: #5a8070;
+      letter-spacing: 1px;
+      text-align: right;
+    }
+
+    .hud-right #clock {
+      color: #ffaa00;
+      font-size: 13px;
+      display: block;
+    }
+
+    /* HUD Bottom Bar */
+    #hud-bottom {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 26px;
+      background: #020a0f;
+      border-top: 1px solid #0d2a1a;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 28px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .status-item {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: #2a4a38;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+    }
+
+    .dot.green { background: #00ff88; box-shadow: 0 0 4px #00ff88; }
+    .dot.red { background: #ff3333; box-shadow: 0 0 4px #ff3333; }
+    .dot.amber { background: #ffaa00; }
+
+    /* Country Panel */
+    #country-panel {
+      position: fixed;
+      top: 0; left: -380px;
+      width: 380px;
+      height: 100%;
+      background: #060e16;
+      border-right: 1px solid #00ff8830;
+      z-index: 900;
+      overflow-y: auto;
+      transition: left 0.3s ease;
+      scrollbar-width: thin;
+      scrollbar-color: #0d2a1a transparent;
+    }
+
+    #country-panel.open { left: 0; }
+
+    /* Panel Header */
+    .panel-header {
+      padding: 56px 20px 20px;
+      border-bottom: 1px solid #0d2a1a;
+      background: linear-gradient(180deg, #091a14 0%, #060e16 100%);
+      position: relative;
+    }
+
+    .panel-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #00ff88, transparent);
+    }
+
+    .panel-country-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .flag-container {
+      width: 64px; height: 42px;
+      border: 1px solid #00ff8830;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .flag-container img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: saturate(0.8) brightness(0.9);
+    }
+
+    .country-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #e0f0e8;
+      letter-spacing: 2px;
+      text-shadow: 0 0 20px rgba(0,255,136,0.3);
+    }
+
+    .country-sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: #5a8070;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    .close-btn {
+      margin-left: auto;
+      width: 28px; height: 28px;
+      border: 1px solid #0d2a1a;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: #5a8070;
+      font-size: 14px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .close-btn:hover { border-color: #ff3333; color: #ff3333; }
+
+    /* Stability Bar */
+    .stability-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stability-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: #5a8070;
+      letter-spacing: 1px;
+      width: 70px;
+      flex-shrink: 0;
+    }
+
+    .stability-bar-bg {
+      flex: 1;
+      height: 4px;
+      background: #0d2a1a;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .stability-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #ffaa00, #00ff88);
+      box-shadow: 0 0 8px #00ff88;
+      transition: width 0.8s ease;
+    }
+
+    .stability-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: #ffaa00;
+      width: 30px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* Panel Sections */
+    .panel-section {
+      padding: 14px 20px;
+      border-bottom: 1px solid #0d2a1a;
+    }
+
+    .section-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: #2a4a38;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #0d2a1a;
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .stat-card {
+      background: #091422;
+      border: 1px solid #0d2a1a;
+      padding: 8px 10px;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card:hover { border-color: #00ff8830; }
+
+    .stat-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: #2a4a38;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #c8dfd0;
+    }
+
+    .stat-value.green { color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+    .stat-value.amber { color: #ffaa00; }
+    .stat-value.red { color: #ff3333; }
+
+    /* Military Rating */
+    .military-rating {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #091422;
+      border: 1px solid #0d2a1a;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .rating-badge {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 2px solid #ffaa00;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .rating-number {
+      font-family: 'Orbitron', monospace;
+      font-size: 14px;
+      font-weight: 900;
+      color: #ffaa00;
+    }
+
+    .rating-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #c8dfd0;
+      margin-bottom: 3px;
+    }
+
+    .rating-sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: #5a8070;
+      letter-spacing: 1px;
+    }
+
+    .mini-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .mini-stat {
+      background: #091422;
+      border: 1px solid #0d2a1a;
+      padding: 7px;
+      text-align: center;
+    }
+
+    .mini-stat-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #00ff88;
+      display: block;
+    }
+
+    .mini-stat-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: #2a4a38;
+      letter-spacing: 1px;
+      margin-top: 2px;
+      display: block;
+      text-transform: uppercase;
+    }
+
+    /* Alliance Badges */
+    .alliance-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .alliance-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      padding: 3px 7px;
+      border: 1px solid #1a3060;
+      color: #00aaff;
+      background: #050f20;
+    }
+
+    .alliance-badge.nuclear {
+      border-color: #3a1515;
+      color: #ff3333;
+      background: #1a0505;
+    }
+
+    /* Nuclear Warning */
+    .nuclear-warning {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f0505;
+      border: 1px solid #3a1010;
+      padding: 7px 10px;
+      margin-top: 8px;
+    }
+
+    .nuclear-icon {
+      color: #ff3333;
+      font-size: 14px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .nuclear-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: #ff6666;
+      letter-spacing: 1px;
+    }
+
+    /* News Items */
+    .news-item {
+      display: flex;
+      gap: 8px;
+      padding: 9px 0;
+      border-bottom: 1px solid #0d2a1a;
+      cursor: pointer;
+    }
+
+    .news-item:last-child { border-bottom: none; }
+
+    .news-tag {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 7px;
+      letter-spacing: 1px;
+      padding: 2px 4px;
+      flex-shrink: 0;
+      height: fit-content;
+      margin-top: 2px;
+    }
+
+    .news-tag.def { background: #1a0a0a; color: #ff3333; border: 1px solid #3a1515; }
+    .news-tag.pol { background: #0a0f1a; color: #00aaff; border: 1px solid #152035; }
+    .news-tag.eco { background: #1a1200; color: #ffaa00; border: 1px solid #3a2800; }
+
+    .news-text {
+      font-size: 11px;
+      line-height: 1.5;
+      color: #c8dfd0;
+    }
+
+    .news-time {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: #2a4a38;
+      margin-top: 3px;
+      display: block;
+      letter-spacing: 1px;
+    }
+
+    /* Loading state */
+    .loading {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: #5a8070;
+      letter-spacing: 2px;
+      text-align: center;
+      padding: 20px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
   </style>
 </head>
 <body>
+
+  <!-- HUD Top -->
+  <div id="hud-top">
+    <div class="hud-logo">MERIDIAN <span>// GLOBAL INTELLIGENCE</span></div>
+    <div class="hud-right">
+      <span id="clock">00:00:00 UTC</span>
+      <span>CLASSIFICATION: OPEN SOURCE</span>
+    </div>
+  </div>
+
+  <!-- Map -->
   <div id="map"></div>
+
+  <!-- Country Panel -->
+  <div id="country-panel">
+    <div class="panel-header">
+      <div class="panel-country-row">
+        <div class="flag-container">
+          <img id="panel-flag" src="" alt="Flag">
+        </div>
+        <div>
+          <div class="country-name" id="panel-name">SELECT A COUNTRY</div>
+          <div class="country-sub" id="panel-sub">CLICK ANY NATION ON THE MAP</div>
+        </div>
+        <div class="close-btn" onclick="closePanel()">✕</div>
+      </div>
+      <div class="stability-row">
+        <span class="stability-label">STABILITY</span>
+        <div class="stability-bar-bg">
+          <div class="stability-bar-fill" id="stability-bar" style="width: 0%"></div>
+        </div>
+        <span class="stability-val" id="stability-val">—</span>
+      </div>
+    </div>
+
+    <!-- Key Stats -->
+    <div class="panel-section">
+      <div class="section-title">Key Data</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Population</div>
+          <div class="stat-value" id="stat-pop">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">GDP</div>
+          <div class="stat-value green" id="stat-gdp">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Def. Budget</div>
+          <div class="stat-value amber" id="stat-def">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">GDP % Def.</div>
+          <div class="stat-value amber" id="stat-defpct">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Military -->
+    <div class="panel-section">
+      <div class="section-title">Military Capability</div>
+      <div class="military-rating">
+        <div class="rating-badge">
+          <span class="rating-number" id="mil-rank">—</span>
+        </div>
+        <div class="rating-info">
+          <div class="rating-title">Global Firepower Rank</div>
+          <div class="rating-sub" id="mil-sub">LOADING...</div>
+        </div>
+      </div>
+      <div class="mini-stats">
+        <div class="mini-stat">
+          <span class="mini-stat-val" id="mil-active">—</span>
+          <span class="mini-stat-label">Active</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat-val" id="mil-aircraft">—</span>
+          <span class="mini-stat-label">Aircraft</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat-val" id="mil-naval">—</span>
+          <span class="mini-stat-label">Naval</span>
+        </div>
+      </div>
+      <div class="nuclear-warning" id="nuclear-warning" style="display:none">
+        <span class="nuclear-icon">☢</span>
+        <span class="nuclear-text" id="nuclear-text">CONFIRMED NUCLEAR STATE</span>
+      </div>
+    </div>
+
+    <!-- Alliances -->
+    <div class="panel-section">
+      <div class="section-title">Alliances & Blocs</div>
+      <div class="alliance-row" id="alliance-row">—</div>
+    </div>
+
+    <!-- Political -->
+    <div class="panel-section">
+      <div class="section-title">Political</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Government</div>
+          <div class="stat-value" id="pol-gov" style="font-size:10px; font-family:'Rajdhani'">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ruling Party</div>
+          <div class="stat-value" id="pol-party" style="font-size:10px; font-family:'Rajdhani'; color:#ff3333;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- News -->
+    <div class="panel-section" id="news-section">
+      <div class="section-title">Top Stories</div>
+      <div id="news-container">
+        <div class="loading">// AWAITING COUNTRY SELECTION</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- HUD Bottom -->
+  <div id="hud-bottom">
+    <div class="status-item"><span class="dot green"></span> FEEDS NOMINAL</div>
+    <div class="status-item"><span class="dot red"></span> ACTIVE CONFLICTS: 14</div>
+    <div class="status-item"><span class="dot amber"></span> NATIONS MONITORED: 195</div>
+  </div>
+
   <script>
+    // Clock
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getUTCHours()).padStart(2,'0');
+      const m = String(now.getUTCMinutes()).padStart(2,'0');
+      const s = String(now.getUTCSeconds()).padStart(2,'0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s} UTC`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Map
     const map = L.map('map', {
       center: [20, 0],
       zoom: 2,
@@ -27,6 +614,79 @@
       attribution: '© CartoDB',
       subdomains: 'abcd'
     }).addTo(map);
+
+    // Panel controls
+    function openPanel() {
+      document.getElementById('country-panel').classList.add('open');
+      document.getElementById('map').classList.add('panel-open');
+    }
+
+    function closePanel() {
+      document.getElementById('country-panel').classList.remove('open');
+      document.getElementById('map').classList.remove('panel-open');
+    }
+
+    // Country click handler
+    function onCountryClick(feature) {
+      const name = feature.properties.ADMIN;
+      const iso = feature.properties.ISO_A2.toLowerCase();
+
+      // Set flag and name
+      document.getElementById('panel-flag').src = `https://flagcdn.com/w160/${iso}.png`;
+      document.getElementById('panel-name').textContent = name.toUpperCase();
+      document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // CLICK FOR INTELLIGENCE`;
+
+      // Reset fields
+      document.getElementById('stability-bar').style.width = '0%';
+      document.getElementById('stability-val').textContent = '—';
+      document.getElementById('stat-pop').textContent = '—';
+      document.getElementById('stat-gdp').textContent = '—';
+      document.getElementById('stat-def').textContent = '—';
+      document.getElementById('stat-defpct').textContent = '—';
+      document.getElementById('mil-rank').textContent = '—';
+      document.getElementById('mil-sub').textContent = 'FETCHING DATA...';
+      document.getElementById('mil-active').textContent = '—';
+      document.getElementById('mil-aircraft').textContent = '—';
+      document.getElementById('mil-naval').textContent = '—';
+      document.getElementById('nuclear-warning').style.display = 'none';
+      document.getElementById('alliance-row').innerHTML = '—';
+      document.getElementById('pol-gov').textContent = '—';
+      document.getElementById('pol-party').textContent = '—';
+      document.getElementById('news-container').innerHTML = '<div class="loading">// FETCHING INTELLIGENCE...</div>';
+
+      openPanel();
+
+      // Fetch country data from REST Countries API
+      fetch(`https://restcountries.com/v3.1/alpha/${iso}`)
+        .then(res => res.json())
+        .then(data => {
+          const country = data[0];
+
+          // Population
+          const pop = country.population;
+          document.getElementById('stat-pop').textContent =
+            pop > 1000000 ? (pop/1000000).toFixed(1) + 'M' : (pop/1000).toFixed(0) + 'K';
+
+          // Region
+          document.getElementById('panel-sub').textContent =
+            `${iso.toUpperCase()} // ${country.region.toUpperCase()} // ${country.subregion ? country.subregion.toUpperCase() : ''}`;
+
+          // Government
+          document.getElementById('pol-gov').textContent = 'See Wikipedia';
+
+          // Alliances placeholder
+          const alliances = ['UN MEMBER'];
+          if (['us','gb','fr','de','it','es','pl','nl','be','pt','no','dk','is','ca','tr','gr','cz','hu','ro','bg','hr','sk','si','ee','lv','lt','al','me','mk','ba','fi','se'].includes(iso)) {
+            alliances.push('NATO');
+          }
+          document.getElementById('alliance-row').innerHTML =
+            alliances.map(a => `<span class="alliance-badge">${a}</span>`).join('');
+
+        })
+        .catch(() => {
+          document.getElementById('panel-sub').textContent = 'DATA UNAVAILABLE';
+        });
+    }
 
     // Load country boundaries
     fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
@@ -48,8 +708,7 @@
                 e.target.setStyle({ fillOpacity: 0.3, fillColor: '#0a2a1a' });
               },
               click: function(e) {
-                const name = feature.properties.ADMIN;
-                alert('You clicked: ' + name);
+                onCountryClick(feature);
               }
             });
           }
