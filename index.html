@@ -629,7 +629,7 @@
     // Country click handler
     function onCountryClick(feature) {
       const name = feature.properties.ADMIN;
-      const iso = feature.properties.ISO_A2.toLowerCase();
+      const iso = (feature.properties.ISO_A2 && feature.properties.ISO_A2 !== '-99') ? feature.properties.ISO_A2.toLowerCase() : feature.properties.ISO_A3.toLowerCase();
 
       // Set flag and name
       document.getElementById('panel-flag').src = `https://flagcdn.com/w160/${iso}.png`;
