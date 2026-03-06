@@ -1364,54 +1364,62 @@
 
       const hasDomestic = !!DOMESTIC_SOURCES[iso];
 
-      // Global feed — country name + geopolitical keywords
       const globalQuery = encodeURIComponent(`"${countryName}" (government OR military OR economy OR politics OR conflict OR election)`);
       const globalUrl = `https://newsapi.org/v2/everything?q=${globalQuery}&sortBy=publishedAt&pageSize=5&language=en&apiKey=${NEWS_API_KEY}`;
 
-      // Domestic feed — known English-language sources for this country
       const domSources = hasDomestic ? DOMESTIC_SOURCES[iso].domains : null;
       const domQuery = encodeURIComponent(`"${countryName}"`);
       const domUrl = hasDomestic
         ? `https://newsapi.org/v2/everything?q=${domQuery}&domains=${domSources}&sortBy=publishedAt&pageSize=5&language=en&apiKey=${NEWS_API_KEY}`
         : null;
 
-      const fetches = [proxyFetch(globalUrl)];
-      if (domUrl) fetches.push(proxyFetch(domUrl));
+      // Sequential fetches with delay to avoid proxy rate limiting
+      proxyFetch(globalUrl)
+        .then(globalData => {
+          const globalArticles = globalData && globalData.articles
+            ? globalData.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 4)
+            : [];
 
-      Promise.allSettled(fetches).then(results => {
-        const globalData = results[0].status === 'fulfilled' ? results[0].value : null;
-        const domData    = results[1] && results[1].status === 'fulfilled' ? results[1].value : null;
+          let html = newsSubheader('// GLOBAL INTELLIGENCE');
+          html += globalArticles.length > 0
+            ? globalArticles.map(buildNewsItem).join('')
+            : '<div class="loading" style="padding:10px 0;animation:none;color:#2a4a38;">// NO GLOBAL SIGNALS</div>';
 
-        const globalArticles = globalData && globalData.articles
-          ? globalData.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 4)
-          : [];
+          html += newsSubheader('// DOMESTIC FEED');
 
-        const domArticles = domData && domData.articles
-          ? domData.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 4)
-          : [];
+          if (!hasDomestic) {
+            html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#2a4a38;letter-spacing:1px;padding:8px 0;">NO DOMESTIC ENGLISH FEED AVAILABLE</div>';
+            document.getElementById('news-container').innerHTML = html;
+            return;
+          }
 
-        let html = '';
+          // Render global immediately, then load domestic after short delay
+          html += '<div class="loading" id="dom-loading">// LOADING DOMESTIC FEED...</div>';
+          document.getElementById('news-container').innerHTML = html;
 
-        // Global section
-        html += newsSubheader('// GLOBAL INTELLIGENCE');
-        if (globalArticles.length > 0) {
-          html += globalArticles.map(buildNewsItem).join('');
-        } else {
-          html += '<div class="loading" style="padding:10px 0;">// NO GLOBAL SIGNALS</div>';
-        }
+          setTimeout(() => {
+            proxyFetch(domUrl)
+              .then(domData => {
+                const domArticles = domData && domData.articles
+                  ? domData.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 4)
+                  : [];
 
-        // Domestic section
-        html += newsSubheader('// DOMESTIC FEED');
-        if (domArticles.length > 0) {
-          html += domArticles.map(buildNewsItem).join('');
-        } else if (!hasDomestic) {
-          html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#2a4a38;letter-spacing:1px;padding:8px 0;">NO DOMESTIC ENGLISH FEED AVAILABLE</div>';
-        } else {
-          html += '<div class="loading" style="padding:10px 0;">// NO DOMESTIC SIGNALS</div>';
-        }
-
-        document.getElementById('news-container').innerHTML = html;
-      });
+                const domEl = document.getElementById('dom-loading');
+                if (!domEl) return;
+                domEl.outerHTML = domArticles.length > 0
+                  ? domArticles.map(buildNewsItem).join('')
+                  : '<div class="loading" style="padding:10px 0;animation:none;color:#2a4a38;">// NO DOMESTIC SIGNALS</div>';
+              })
+              .catch(() => {
+                const domEl = document.getElementById('dom-loading');
+                if (domEl) domEl.outerHTML = '<div class="loading" style="padding:10px 0;animation:none;color:#2a4a38;">// DOMESTIC FEED INTERRUPTED</div>';
+              });
+          }, 800);
+        })
+        .catch(() => {
+          document.getElementById('news-container').innerHTML =
+            '<div class="loading">// FEED INTERRUPTED</div>';
+        });
     }
 
     // ─── GEOJSON + HEATMAP ──────────────────────────────────────────────────────
