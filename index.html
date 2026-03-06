@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Meridian</title>
   <script src="https://unpkg.com/globe.gl@2.27.2/dist/globe.gl.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -82,7 +84,44 @@
 
     .toggle-btn:first-child { border-right: none; }
     .toggle-btn.active { background: #091a14; color: #00ff88; border-color: #00ff8860; text-shadow: 0 0 8px #00ff88; }
+    .toggle-btn.active.conflict-on { background: #1a0505; color: #ff3333; border-color: #ff333360; text-shadow: 0 0 8px #ff3333; }
     .toggle-btn:hover:not(.active) { color: #5a8070; border-color: #1a4a2a; }
+
+    #terrain-map {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: none;
+      transition: left 0.3s ease, width 0.3s ease;
+      z-index: 1;
+    }
+
+    #terrain-map.panel-open {
+      left: 380px;
+      width: calc(100% - 380px);
+    }
+
+    /* Override Leaflet defaults for dark theme */
+    .leaflet-container { background: #020810; }
+    .leaflet-control-zoom a { background: #060e16; color: #00ff88; border-color: #0d2a1a; }
+    .leaflet-control-zoom a:hover { background: #091a14; }
+    .leaflet-control-attribution { background: rgba(2,8,16,0.8) !important; color: #2a4a38 !important; }
+    .leaflet-control-attribution a { color: #2a4a38 !important; }
+
+    /* Pulsing conflict markers */
+    @keyframes conflict-pulse {
+      0%   { transform: scale(1);   opacity: 1; }
+      50%  { transform: scale(1.6); opacity: 0.5; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+
+    .conflict-marker {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #ff3333;
+      box-shadow: 0 0 0 3px rgba(255,51,51,0.3);
+      animation: conflict-pulse 1.8s ease-in-out infinite;
+      cursor: pointer;
+    }
 
     /* ── HUD BOTTOM ── */
     #hud-bottom {
@@ -370,11 +409,13 @@
   </div>
 
   <div id="map-toggle">
-    <div class="toggle-btn active" id="btn-tactical" onclick="setGlobeMode('tactical')">⬛ TACTICAL</div>
-    <div class="toggle-btn"        id="btn-terrain"  onclick="setGlobeMode('terrain')">🌍 TERRAIN</div>
+    <div class="toggle-btn active" id="btn-tactical"  onclick="setGlobeMode('tactical')">⬛ TACTICAL</div>
+    <div class="toggle-btn"        id="btn-terrain"   onclick="setGlobeMode('terrain')">🌍 TERRAIN</div>
+    <div class="toggle-btn"        id="btn-conflict"  onclick="toggleConflict()">⚔ CONFLICT</div>
   </div>
 
   <div id="globe-container"></div>
+  <div id="terrain-map"></div>
 
   <div id="country-panel">
     <div class="panel-header">
@@ -826,14 +867,22 @@
     function openPanel() {
       document.getElementById('country-panel').classList.add('open');
       document.getElementById('globe-container').classList.add('panel-open');
+      document.getElementById('terrain-map').classList.add('panel-open');
       resetTabs();
-      setTimeout(() => globe.width(document.getElementById('globe-container').offsetWidth), 310);
+      setTimeout(() => {
+        if (currentMode === 'tactical') globe.width(document.getElementById('globe-container').offsetWidth);
+        else leafletMap && leafletMap.invalidateSize();
+      }, 310);
     }
 
     function closePanel() {
       document.getElementById('country-panel').classList.remove('open');
       document.getElementById('globe-container').classList.remove('panel-open');
-      setTimeout(() => globe.width(document.getElementById('globe-container').offsetWidth), 310);
+      document.getElementById('terrain-map').classList.remove('panel-open');
+      setTimeout(() => {
+        if (currentMode === 'tactical') globe.width(document.getElementById('globe-container').offsetWidth);
+        else leafletMap && leafletMap.invalidateSize();
+      }, 310);
     }
 
     function switchTab(tab) {
@@ -1147,20 +1196,38 @@
     // ─── GLOBE SETUP ─────────────────────────────────────────────────────────────
     let globeData = [];
     let currentMode = 'tactical';
+    let conflictActive = false;
+    let conflictMarkers = []; // globe point markers
+    let leafletMap = null;
+    let leafletConflictLayer = null;
 
-    const TACTICAL_BG   = '#020810';
+    const TACTICAL_BG = '#020810';
 
-    // Terrain uses Esri World Imagery — proper tiled satellite imagery, sharp at all zoom levels
-    // We achieve this by dynamically building a canvas texture from tiles at increasing detail
-    // For globe.gl the cleanest approach is a high-res static satellite image from NASA
-    const TERRAIN_IMG = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
-    const TERRAIN_BUMP = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
+    // ── Conflict zone data (lat/lng + label) ─────────────────────────────────────
+    const CONFLICT_ZONES_GEO = [
+      { lat: 49.0,  lng: 32.0,  iso: 'ua', label: 'UKRAINE — ACTIVE WAR' },
+      { lat: 15.5,  lng: 48.5,  iso: 'ye', label: 'YEMEN — CIVIL WAR' },
+      { lat: 15.0,  lng: 30.0,  iso: 'sd', label: 'SUDAN — ACTIVE CONFLICT' },
+      { lat: 14.0,  lng: 40.5,  iso: 'et', label: 'ETHIOPIA — INTERNAL CONFLICT' },
+      { lat: 12.0,  lng: 15.0,  iso: 'td', label: 'CHAD — INSTABILITY' },
+      { lat: 9.0,   lng: 8.0,   iso: 'ng', label: 'NIGERIA — INSURGENCY' },
+      { lat: 17.0,  lng: -1.0,  iso: 'ml', label: 'MALI — CIVIL CONFLICT' },
+      { lat: 12.5,  lng: -5.5,  iso: 'bf', label: 'BURKINA FASO — INSURGENCY' },
+      { lat: 5.5,   lng: 26.0,  iso: 'cd', label: 'DR CONGO — CIVIL WAR' },
+      { lat: 2.0,   lng: 28.5,  iso: 'ss', label: 'S. SUDAN — CONFLICT' },
+      { lat: 34.5,  lng: 69.0,  iso: 'af', label: 'AFGHANISTAN — INSURGENCY' },
+      { lat: 33.5,  lng: 43.0,  iso: 'iq', label: 'IRAQ — INSTABILITY' },
+      { lat: 33.5,  lng: 36.5,  iso: 'sy', label: 'SYRIA — POST-CONFLICT' },
+      { lat: 31.5,  lng: 34.5,  iso: 'il', label: 'ISRAEL/GAZA — ACTIVE OPERATIONS' },
+      { lat: 26.0,  lng: 17.0,  iso: 'ly', label: 'LIBYA — DIVIDED STATE' },
+      { lat: 19.0,  lng: 96.0,  iso: 'mm', label: 'MYANMAR — MILITARY CONFLICT' },
+      { lat: 7.0,   lng: -11.5, iso: 'sl', label: 'SAHEL REGION — INSTABILITY' },
+      { lat: 5.0,   lng: -4.0,  iso: 'ci', label: 'W. AFRICA — INSTABILITY' },
+    ];
 
+    // ── Tactical polygon colours — flat navy, no heatmap ────────────────────────
     function getPolygonColour(iso) {
-      const score = getStabilityScore(iso);
-      if (score === null) return 'rgba(10,42,26,0.5)';
-      const c = stabilityColour(score);
-      return hexToRgba(c, 0.5);
+      return 'rgba(8, 20, 40, 0.75)'; // deep navy, uniform
     }
 
     function hexToRgba(hex, alpha) {
@@ -1170,13 +1237,11 @@
       return `rgba(${r},${g},${b},${alpha})`;
     }
 
-    function getPolygonStroke(iso) {
-      const score = getStabilityScore(iso);
-      if (score === null) return '#00ff88';
-      return stabilityColour(score);
+    function getPolygonStroke() {
+      return '#00ff88'; // uniform green borders
     }
 
-    // Country label positions for major nations
+    // ── Country labels ────────────────────────────────────────────────────────────
     const COUNTRY_LABELS = [
       {name:'USA',lat:39,lng:-98,size:0.6},{name:'CANADA',lat:60,lng:-96,size:0.55},
       {name:'MEXICO',lat:23,lng:-102,size:0.45},{name:'BRAZIL',lat:-10,lng:-53,size:0.6},
@@ -1197,28 +1262,28 @@
       {name:'NIGERIA',lat:9,lng:8,size:0.45},{name:'ETHIOPIA',lat:9,lng:40,size:0.4},
       {name:'KENYA',lat:0,lng:38,size:0.38},{name:'ALGERIA',lat:28,lng:3,size:0.45},
       {name:'MOROCCO',lat:32,lng:-6,size:0.38},{name:'ISRAEL',lat:31,lng:35,size:0.32},
-      {name:'UKRAINE',lat:49,lng:32,size:0.45},{name:'KAZAKHSTAN',lat:49,lng:68,size:0.5},
-      {name:'THAILAND',lat:15,lng:101,size:0.4},{name:'VIETNAM',lat:16,lng:108,size:0.38},
-      {name:'MALAYSIA',lat:4,lng:110,size:0.38},{name:'PHILIPPINES',lat:13,lng:122,size:0.38},
-      {name:'NEW ZEALAND',lat:-42,lng:172,size:0.38},{name:'TAIWAN',lat:24,lng:121,size:0.32},
-      {name:'N. KOREA',lat:40,lng:127,size:0.35},{name:'MYANMAR',lat:19,lng:96,size:0.38},
-      {name:'VENEZUELA',lat:8,lng:-66,size:0.4},{name:'AFGHANISTAN',lat:34,lng:66,size:0.4},
-      {name:'SYRIA',lat:35,lng:38,size:0.35},{name:'LIBYA',lat:27,lng:17,size:0.4},
-      {name:'SUDAN',lat:16,lng:31,size:0.4},{name:'ANGOLA',lat:-12,lng:18,size:0.4},
-      {name:'MOZAMBIQUE',lat:-18,lng:35,size:0.38},{name:'TANZANIA',lat:-7,lng:35,size:0.38},
+      {name:'KAZAKHSTAN',lat:49,lng:68,size:0.5},{name:'THAILAND',lat:15,lng:101,size:0.4},
+      {name:'VIETNAM',lat:16,lng:108,size:0.38},{name:'MALAYSIA',lat:4,lng:110,size:0.38},
+      {name:'PHILIPPINES',lat:13,lng:122,size:0.38},{name:'NEW ZEALAND',lat:-42,lng:172,size:0.38},
+      {name:'TAIWAN',lat:24,lng:121,size:0.32},{name:'N. KOREA',lat:40,lng:127,size:0.35},
+      {name:'MYANMAR',lat:19,lng:96,size:0.38},{name:'VENEZUELA',lat:8,lng:-66,size:0.4},
+      {name:'AFGHANISTAN',lat:34,lng:66,size:0.4},{name:'SYRIA',lat:35,lng:38,size:0.35},
+      {name:'LIBYA',lat:27,lng:17,size:0.4},{name:'SUDAN',lat:16,lng:31,size:0.4},
+      {name:'ANGOLA',lat:-12,lng:18,size:0.4},{name:'TANZANIA',lat:-7,lng:35,size:0.38},
     ];
 
+    // ── Globe init ────────────────────────────────────────────────────────────────
     const globe = Globe()(document.getElementById('globe-container'))
       .width(window.innerWidth)
       .height(window.innerHeight)
       .backgroundColor(TACTICAL_BG)
       .showAtmosphere(true)
-      .atmosphereColor('#00ff88')
-      .atmosphereAltitude(0.15)
+      .atmosphereColor('#00aaff')
+      .atmosphereAltitude(0.18)
       .globeImageUrl('')
-      .polygonCapColor(d => getPolygonColour(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''))
-      .polygonSideColor(() => 'rgba(0,255,136,0.04)')
-      .polygonStrokeColor(d => getPolygonStroke(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''))
+      .polygonCapColor(() => getPolygonColour())
+      .polygonSideColor(() => 'rgba(0, 180, 255, 0.06)')
+      .polygonStrokeColor(() => getPolygonStroke())
       .polygonAltitude(0.003)
       .polygonsTransitionDuration(200)
       .labelsData(COUNTRY_LABELS)
@@ -1227,23 +1292,26 @@
       .labelText(d => d.name)
       .labelSize(d => d.size)
       .labelDotRadius(0)
-      .labelColor(() => 'rgba(180,210,195,0.7)')
+      .labelColor(() => 'rgba(160, 200, 230, 0.7)')
       .labelResolution(2)
       .labelAltitude(0.015)
+      // Conflict point markers (shown when conflict mode active)
+      .pointsData([])
+      .pointLat(d => d.lat)
+      .pointLng(d => d.lng)
+      .pointColor(() => '#ff3333')
+      .pointAltitude(0.01)
+      .pointRadius(0.4)
+      .pointsMerge(false)
+      .pointLabel(d => `<div class="globe-tooltip"><div class="gt-name" style="color:#ff3333">${d.label}</div></div>`)
       .polygonLabel(d => {
         const iso = d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : null;
         const name = d.properties.ADMIN || d.properties.name || '';
-        const score = iso ? getStabilityScore(iso) : null;
         const pop = d.properties.POP_EST;
-        const scoreColour = score ? stabilityColour(score) : '#5a8070';
         return `<div class="globe-tooltip">
           ${iso ? `<img class="gt-flag" src="https://flagcdn.com/w40/${iso}.png" onerror="this.style.display='none'">` : ''}
           <div class="gt-name">${name.toUpperCase()}</div>
           ${pop ? `<div class="gt-row">POP <span>${fmtPop(pop)}</span></div>` : ''}
-          ${score !== null ? `
-            <div class="gt-bar-bg"><div class="gt-bar-fill" style="width:${score}%;background:${scoreColour};height:3px;"></div></div>
-            <div class="gt-score" style="color:${scoreColour}">${score} · ${stabilityLabel(score)}</div>
-          ` : ''}
         </div>`;
       })
       .onPolygonClick(d => onCountryClick(d))
@@ -1252,43 +1320,27 @@
         document.getElementById('globe-container').style.cursor = d ? 'pointer' : 'default';
       });
 
-    // Set initial globe appearance — dark tactical with no texture, space background
     globe.scene().background = null;
-
-    // Auto-rotate slowly
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 0.4;
     globe.controls().enableZoom = true;
     globe.controls().minDistance = 150;
     globe.controls().maxDistance = 600;
-
-    // Stop auto-rotate on interaction, resume after
     globe.controls().addEventListener('start', () => { globe.controls().autoRotate = false; });
 
-    // Territory → sovereign parent ISO mapping
-    // When a territory is clicked, we show the sovereign nation's data
+    // ── Territory parent lookup ───────────────────────────────────────────────────
     const TERRITORY_PARENT = {
-      // US territories
       'pr':'us','vi':'us','gu':'us','mp':'us','as':'us','um':'us',
-      // UK territories
       'gi':'gb','fk':'gb','sh':'gb','tc':'gb','ky':'gb','vg':'gb','ai':'gb','ms':'gb','bm':'gb','io':'gb','gs':'gb','ac':'gb',
-      // France territories
       'gp':'fr','mq':'fr','gf':'fr','re':'fr','yt':'fr','pm':'fr','wf':'fr','pf':'fr','nc':'fr','tf':'fr','mf':'fr','bl':'fr',
-      // Netherlands territories
       'aw':'nl','cw':'nl','sx':'nl','bq':'nl',
-      // Denmark territories
       'gl':'dk','fo':'dk',
-      // Norway territories
       'sj':'no','bv':'no',
-      // Australia territories
       'cx':'au','cc':'au','nf':'au','hm':'au',
-      // New Zealand territories
       'ck':'nz','nu':'nz','tk':'nz',
-      // Portugal territories
-      'pt':'pt', // Azores/Madeira already pt
     };
 
-    // Load GeoJSON — 50m resolution includes islands and territories
+    // ── Load GeoJSON ──────────────────────────────────────────────────────────────
     fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson')
       .then(r => r.json())
       .then(data => {
@@ -1296,55 +1348,97 @@
         globe.polygonsData(globeData);
       })
       .catch(() => {
-        // Fallback to 110m if 50m fails
         fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
           .then(r => r.json())
-          .then(data => {
-            globeData = data.features;
-            globe.polygonsData(globeData);
-          });
+          .then(data => { globeData = data.features; globe.polygonsData(globeData); });
       });
 
-    // ─── MAP MODE TOGGLE ─────────────────────────────────────────────────────────
+    // ── Leaflet terrain map (lazy-initialised on first terrain click) ─────────────
+    function initLeafletMap() {
+      if (leafletMap) return;
+      leafletMap = L.map('terrain-map', { zoomControl: true, attributionControl: true })
+        .setView([20, 0], 2);
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 8,
+      }).addTo(leafletMap);
+
+      // Leaflet conflict layer (created but empty until conflict toggled)
+      leafletConflictLayer = L.layerGroup().addTo(leafletMap);
+    }
+
+    function refreshLeafletConflict() {
+      if (!leafletConflictLayer) return;
+      leafletConflictLayer.clearLayers();
+      if (!conflictActive) return;
+      CONFLICT_ZONES_GEO.forEach(z => {
+        const el = document.createElement('div');
+        el.className = 'conflict-marker';
+        const marker = L.marker([z.lat, z.lng], {
+          icon: L.divIcon({ className: '', html: el, iconSize: [12, 12], iconAnchor: [6, 6] })
+        });
+        marker.bindTooltip(`<span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#ff3333;letter-spacing:1px;">${z.label}</span>`, {
+          className: 'leaflet-tooltip-dark', direction: 'top'
+        });
+        leafletConflictLayer.addLayer(marker);
+      });
+    }
+
+    // ── Mode toggle ───────────────────────────────────────────────────────────────
     function setGlobeMode(mode) {
       if (mode === currentMode) return;
       currentMode = mode;
+      const globeEl   = document.getElementById('globe-container');
+      const terrainEl = document.getElementById('terrain-map');
+
       if (mode === 'tactical') {
-        globe.globeImageUrl('');
-        globe.bumpImageUrl('');
-        globe.backgroundColor(TACTICAL_BG);
-        globe.atmosphereColor('#00ff88');
-        globe.atmosphereAltitude(0.15);
-        globe.polygonCapColor(d => getPolygonColour(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
-        globe.polygonStrokeColor(d => getPolygonStroke(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
-        globe.labelsData(COUNTRY_LABELS);
+        globeEl.style.display = 'block';
+        terrainEl.style.display = 'none';
         document.getElementById('btn-tactical').classList.add('active');
         document.getElementById('btn-terrain').classList.remove('active');
+        // Sync conflict state to globe
+        globe.pointsData(conflictActive ? CONFLICT_ZONES_GEO : []);
+        setTimeout(() => globe.width(globeEl.offsetWidth), 50);
       } else {
-        globe.globeImageUrl(TERRAIN_IMG);
-        globe.bumpImageUrl(TERRAIN_BUMP);
-        globe.backgroundColor('#000816');
-        globe.atmosphereColor('#88aaff');
-        globe.atmosphereAltitude(0.2);
-        globe.polygonCapColor(() => 'rgba(0,0,0,0)');
-        globe.polygonStrokeColor(() => 'rgba(255,255,255,0.5)');
-        globe.labelsData([]);
+        globeEl.style.display = 'none';
+        terrainEl.style.display = 'block';
+        initLeafletMap();
+        refreshLeafletConflict();
         document.getElementById('btn-terrain').classList.add('active');
         document.getElementById('btn-tactical').classList.remove('active');
+        setTimeout(() => leafletMap && leafletMap.invalidateSize(), 100);
       }
     }
 
-    // ─── GLOBE POLYGON UPDATE AFTER DATA LOAD ────────────────────────────────────
+    // ── Conflict toggle ───────────────────────────────────────────────────────────
+    function toggleConflict() {
+      conflictActive = !conflictActive;
+      const btn = document.getElementById('btn-conflict');
+      btn.classList.toggle('active', conflictActive);
+      btn.classList.toggle('conflict-on', conflictActive);
+
+      if (currentMode === 'tactical') {
+        globe.pointsData(conflictActive ? CONFLICT_ZONES_GEO : []);
+      } else {
+        refreshLeafletConflict();
+      }
+    }
+
+    // ── Polygon colour update (no-op now — uniform navy) ─────────────────────────
     function updateGlobePolygon(iso, score) {
       stabilityCache[iso] = score;
-      globe.polygonCapColor(d => getPolygonColour(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
-      globe.polygonStrokeColor(d => getPolygonStroke(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
+      // colours are now uniform — no per-country update needed
     }
 
     // ─── RESIZE HANDLER ──────────────────────────────────────────────────────────
     window.addEventListener('resize', () => {
-      globe.width(document.getElementById('globe-container').offsetWidth);
-      globe.height(window.innerHeight);
+      if (currentMode === 'tactical') {
+        globe.width(document.getElementById('globe-container').offsetWidth);
+        globe.height(window.innerHeight);
+      } else {
+        leafletMap && leafletMap.invalidateSize();
+      }
     });
   </script>
 </body>
