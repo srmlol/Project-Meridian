@@ -1258,11 +1258,13 @@
 
       // Build a targeted query: country name + geopolitical keywords
       const query = encodeURIComponent(`"${countryName}"`);
-      const url = `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=8&language=en&apiKey=${NEWS_API_KEY}`;
+      const newsUrl = `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=8&language=en&apiKey=${NEWS_API_KEY}`;
+      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(newsUrl)}`;
 
       fetch(url)
         .then(r => r.json())
-        .then(data => {
+        .then(wrapper => {
+          const data = JSON.parse(wrapper.contents);
           if (!data.articles || data.articles.length === 0) {
             document.getElementById('news-container').innerHTML =
               '<div class="loading">// NO SIGNALS DETECTED</div>';
