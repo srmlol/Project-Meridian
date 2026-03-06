@@ -1232,23 +1232,74 @@
           document.getElementById('stability-val').style.color = col;
         });
 
-      // ── News placeholder (Phase 4) ──
-      document.getElementById('news-container').innerHTML = `
-        <div style="padding:12px 0;">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#2a4a38;letter-spacing:2px;margin-bottom:8px;">// LIVE FEEDS WIRING IN PHASE 4</div>
-          <div class="news-item">
-            <span class="news-tag pol">POL</span>
-            <div><div class="news-text">Political intelligence feed pending NewsAPI integration.</div><span class="news-time">PHASE 4 PENDING</span></div>
-          </div>
-          <div class="news-item">
-            <span class="news-tag eco">ECO</span>
-            <div><div class="news-text">Economic data streams will auto-populate on Phase 4 deployment.</div><span class="news-time">PHASE 4 PENDING</span></div>
-          </div>
-          <div class="news-item">
-            <span class="news-tag def">DEF</span>
-            <div><div class="news-text">Defence & conflict monitoring feeds require NewsAPI key.</div><span class="news-time">PHASE 4 PENDING</span></div>
-          </div>
-        </div>`;
+      // ── News feeds (Phase 4 — NewsAPI) ──
+      fetchNews(name, iso);
+    }
+
+    // ─── NEWS FEEDS (Phase 4) ────────────────────────────────────────────────────
+    const NEWS_API_KEY = '864816b2133e425b9cf8e0f9ef9067c0';
+
+    function classifyArticle(title, description) {
+      const text = (title + ' ' + (description || '')).toLowerCase();
+      if (/militar|army|navy|air force|troops|weapon|missile|war|conflict|attack|bomb|strike|drone|defence|defense|nato|nuclear|soldier|combat|invasion|terror|isis|rebel|coup/.test(text)) return 'def';
+      if (/economy|gdp|inflation|trade|sanction|market|bank|currency|recession|export|import|finance|budget|debt|investment|oil|energy/.test(text)) return 'eco';
+      return 'pol';
+    }
+
+    function timeAgo(dateStr) {
+      const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+      if (diff < 3600)  return Math.floor(diff / 60) + 'M AGO';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'H AGO';
+      return Math.floor(diff / 86400) + 'D AGO';
+    }
+
+    function fetchNews(countryName, iso) {
+      document.getElementById('news-container').innerHTML = '<div class="loading">// INTERCEPTING SIGNALS...</div>';
+
+      // Build a targeted query: country name + geopolitical keywords
+      const query = encodeURIComponent(`"${countryName}"`);
+      const url = `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=8&language=en&apiKey=${NEWS_API_KEY}`;
+
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          if (!data.articles || data.articles.length === 0) {
+            document.getElementById('news-container').innerHTML =
+              '<div class="loading">// NO SIGNALS DETECTED</div>';
+            return;
+          }
+
+          // Filter out articles with removed/null content
+          const articles = data.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 6);
+
+          if (articles.length === 0) {
+            document.getElementById('news-container').innerHTML =
+              '<div class="loading">// NO SIGNALS DETECTED</div>';
+            return;
+          }
+
+          const html = articles.map(a => {
+            const tag = classifyArticle(a.title, a.description);
+            const ago = timeAgo(a.publishedAt);
+            const source = a.source.name ? a.source.name.toUpperCase() : 'UNKNOWN SOURCE';
+            const title = a.title.length > 90 ? a.title.substring(0, 90) + '…' : a.title;
+            const link = a.url;
+            return `
+              <div class="news-item" onclick="window.open('${link}','_blank')">
+                <span class="news-tag ${tag}">${tag.toUpperCase()}</span>
+                <div>
+                  <div class="news-text">${title}</div>
+                  <span class="news-time">${source} // ${ago}</span>
+                </div>
+              </div>`;
+          }).join('');
+
+          document.getElementById('news-container').innerHTML = html;
+        })
+        .catch(() => {
+          document.getElementById('news-container').innerHTML =
+            '<div class="loading">// FEED INTERRUPTED</div>';
+        });
     }
 
     // ─── GEOJSON + HEATMAP ──────────────────────────────────────────────────────
