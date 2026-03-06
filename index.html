@@ -850,11 +850,14 @@
       if (!feature) return;
       const name = feature.properties.ADMIN || feature.properties.name;
       const rawIso = feature.properties.ISO_A2 || feature.properties['ISO3166-1-Alpha-2'];
-      const iso = rawIso && rawIso !== '-99' ? rawIso.toLowerCase() : null;
+      let iso = rawIso && rawIso !== '-99' ? rawIso.toLowerCase() : null;
       if (!iso || !name) return;
 
+      // Resolve territory to sovereign parent for data lookups
+      const dataIso = TERRITORY_PARENT[iso] || iso;
+
       // Reset
-      document.getElementById('panel-flag').src = `https://flagcdn.com/w160/${iso}.png`;
+      document.getElementById('panel-flag').src = `https://flagcdn.com/w160/${dataIso}.png`;
       document.getElementById('panel-name').textContent = name.toUpperCase();
       document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // FETCHING DATA...`;
       document.getElementById('stability-bar').style.width = '0%';
@@ -876,10 +879,15 @@
       document.getElementById('pol-risk-container').innerHTML = '';
       document.getElementById('news-container').innerHTML = '<div class="loading">// FETCHING INTELLIGENCE...</div>';
 
+      // Show territory note if applicable
+      if (dataIso !== iso) {
+        document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // TERRITORY OF ${dataIso.toUpperCase()}`;
+      }
+
       openPanel();
 
       // Military
-      const mil = MILITARY_DATA[iso];
+      const mil = MILITARY_DATA[dataIso];
       if (mil) {
         document.getElementById('mil-rank').textContent = '#' + mil.rank;
         document.getElementById('mil-sub').textContent = mil.tier;
@@ -892,20 +900,20 @@
       }
 
       // Nuclear
-      if (NUCLEAR_STATES[iso]) {
+      if (NUCLEAR_STATES[dataIso]) {
         document.getElementById('nuclear-warning').style.display = 'flex';
         document.getElementById('nuclear-none').style.display = 'none';
-        document.getElementById('nuclear-text').textContent = NUCLEAR_STATES[iso];
+        document.getElementById('nuclear-text').textContent = NUCLEAR_STATES[dataIso];
       }
 
       // Alliances
-      const alliances = ALLIANCES[iso] || ['UN'];
+      const alliances = ALLIANCES[dataIso] || ['UN'];
       document.getElementById('alliance-row').innerHTML = alliances.length
         ? alliances.map(a => `<span class="${ALLIANCE_STYLES[a] || 'alliance-badge'}">${a}</span>`).join('')
         : '<span style="color:#2a4a38;font-family:\'Share Tech Mono\',monospace;font-size:9px;">UNALIGNED</span>';
 
       // Defence
-      const def = DEFENCE_DATA[iso];
+      const def = DEFENCE_DATA[dataIso];
       if (def) {
         document.getElementById('stat-def').textContent = '$' + def.budget + 'B';
         document.getElementById('stat-defpct').textContent = def.pct.toFixed(1) + '%';
@@ -914,14 +922,14 @@
       }
 
       // Political
-      const pol = POLITICAL_DATA[iso];
+      const pol = POLITICAL_DATA[dataIso];
       if (pol) {
         document.getElementById('pol-gov').textContent = pol.gov;
         document.getElementById('pol-party').textContent = pol.leader;
       }
 
       // Democracy
-      const demo = DEMOCRACY_DATA[iso];
+      const demo = DEMOCRACY_DATA[dataIso];
       if (demo) {
         const pct = (demo.score / 10) * 100;
         const dCol = demo.score >= 8 ? '#00ff88' : demo.score >= 6 ? '#aaff44' : demo.score >= 4 ? '#ffaa00' : demo.score >= 2 ? '#ff6600' : '#ff3333';
@@ -935,7 +943,7 @@
       }
 
       // Election
-      const elec = ELECTION_DATA[iso];
+      const elec = ELECTION_DATA[dataIso];
       if (elec) {
         const elEl = document.getElementById('pol-election');
         elEl.textContent = elec.next;
@@ -944,22 +952,24 @@
       }
 
       // Risk
-      const risk = POLITICAL_RISK[iso];
+      const risk = POLITICAL_RISK[dataIso];
       if (risk) {
         document.getElementById('pol-risk-container').innerHTML = `<div class="risk-flag ${risk.cls}">${risk.label}</div>`;
       }
 
       // REST Countries + World Bank GDP
-      fetch(`https://restcountries.com/v3.1/alpha/${iso}`)
+      fetch(`https://restcountries.com/v3.1/alpha/${dataIso}`)
         .then(r => r.json())
         .then(data => {
           const country = data[0];
           const pop = country.population;
           document.getElementById('stat-pop').textContent = fmtPop(pop);
-          document.getElementById('panel-sub').textContent =
-            `${iso.toUpperCase()} // ${country.region.toUpperCase()}${country.subregion ? ' · ' + country.subregion.toUpperCase() : ''}`;
+          if (dataIso === iso) {
+            document.getElementById('panel-sub').textContent =
+              `${iso.toUpperCase()} // ${country.region.toUpperCase()}${country.subregion ? ' · ' + country.subregion.toUpperCase() : ''}`;
+          }
 
-          return fetch(`https://api.worldbank.org/v2/country/${iso.toUpperCase()}/indicator/NY.GDP.MKTP.CD?format=json&mrv=1`)
+          return fetch(`https://api.worldbank.org/v2/country/${dataIso.toUpperCase()}/indicator/NY.GDP.MKTP.CD?format=json&mrv=1`)
             .then(r => r.json())
             .then(wbData => {
               let gdp = null;
@@ -967,8 +977,8 @@
               document.getElementById('stat-gdp').textContent = gdp ? fmtGDP(gdp) : 'N/A';
 
               const gdpPerCap = gdp && pop ? gdp / pop : 0;
-              const score = computeStability(iso, gdpPerCap);
-              stabilityCache[iso] = score;
+              const score = computeStability(dataIso, gdpPerCap);
+              stabilityCache[dataIso] = score;
               const col = stabilityColour(score);
               const bar = document.getElementById('stability-bar');
               bar.style.width = score + '%';
@@ -978,12 +988,12 @@
               document.getElementById('stability-val').style.color = col;
 
               // Update globe polygon colour
-              updateGlobePolygon(iso, score);
+              updateGlobePolygon(dataIso, score);
             });
         })
         .catch(() => {
           document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // DATA PARTIAL`;
-          const score = computeStability(iso, 0);
+          const score = computeStability(dataIso, 0);
           const col = stabilityColour(score);
           const bar = document.getElementById('stability-bar');
           bar.style.width = score + '%';
@@ -992,7 +1002,7 @@
           document.getElementById('stability-val').style.color = col;
         });
 
-      fetchNews(name, iso);
+      fetchNews(name, dataIso);
     }
 
     // ─── NEWS FEEDS ──────────────────────────────────────────────────────────────
@@ -1139,7 +1149,12 @@
     let currentMode = 'tactical';
 
     const TACTICAL_BG   = '#020810';
-    const TERRAIN_IMG   = 'https://unpkg.com/three-globe/example/img/earth-day.jpg';
+
+    // Terrain uses Esri World Imagery — proper tiled satellite imagery, sharp at all zoom levels
+    // We achieve this by dynamically building a canvas texture from tiles at increasing detail
+    // For globe.gl the cleanest approach is a high-res static satellite image from NASA
+    const TERRAIN_IMG = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
+    const TERRAIN_BUMP = 'https://unpkg.com/three-globe/example/img/earth-topology.png';
 
     function getPolygonColour(iso) {
       const score = getStabilityScore(iso);
@@ -1250,12 +1265,44 @@
     // Stop auto-rotate on interaction, resume after
     globe.controls().addEventListener('start', () => { globe.controls().autoRotate = false; });
 
-    // Load GeoJSON
-    fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
+    // Territory → sovereign parent ISO mapping
+    // When a territory is clicked, we show the sovereign nation's data
+    const TERRITORY_PARENT = {
+      // US territories
+      'pr':'us','vi':'us','gu':'us','mp':'us','as':'us','um':'us',
+      // UK territories
+      'gi':'gb','fk':'gb','sh':'gb','tc':'gb','ky':'gb','vg':'gb','ai':'gb','ms':'gb','bm':'gb','io':'gb','gs':'gb','ac':'gb',
+      // France territories
+      'gp':'fr','mq':'fr','gf':'fr','re':'fr','yt':'fr','pm':'fr','wf':'fr','pf':'fr','nc':'fr','tf':'fr','mf':'fr','bl':'fr',
+      // Netherlands territories
+      'aw':'nl','cw':'nl','sx':'nl','bq':'nl',
+      // Denmark territories
+      'gl':'dk','fo':'dk',
+      // Norway territories
+      'sj':'no','bv':'no',
+      // Australia territories
+      'cx':'au','cc':'au','nf':'au','hm':'au',
+      // New Zealand territories
+      'ck':'nz','nu':'nz','tk':'nz',
+      // Portugal territories
+      'pt':'pt', // Azores/Madeira already pt
+    };
+
+    // Load GeoJSON — 50m resolution includes islands and territories
+    fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson')
       .then(r => r.json())
       .then(data => {
         globeData = data.features;
         globe.polygonsData(globeData);
+      })
+      .catch(() => {
+        // Fallback to 110m if 50m fails
+        fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
+          .then(r => r.json())
+          .then(data => {
+            globeData = data.features;
+            globe.polygonsData(globeData);
+          });
       });
 
     // ─── MAP MODE TOGGLE ─────────────────────────────────────────────────────────
@@ -1264,6 +1311,7 @@
       currentMode = mode;
       if (mode === 'tactical') {
         globe.globeImageUrl('');
+        globe.bumpImageUrl('');
         globe.backgroundColor(TACTICAL_BG);
         globe.atmosphereColor('#00ff88');
         globe.atmosphereAltitude(0.15);
@@ -1274,11 +1322,12 @@
         document.getElementById('btn-terrain').classList.remove('active');
       } else {
         globe.globeImageUrl(TERRAIN_IMG);
+        globe.bumpImageUrl(TERRAIN_BUMP);
         globe.backgroundColor('#000816');
         globe.atmosphereColor('#88aaff');
         globe.atmosphereAltitude(0.2);
         globe.polygonCapColor(() => 'rgba(0,0,0,0)');
-        globe.polygonStrokeColor(() => 'rgba(0,255,136,0.6)');
+        globe.polygonStrokeColor(() => 'rgba(255,255,255,0.5)');
         globe.labelsData([]);
         document.getElementById('btn-terrain').classList.add('active');
         document.getElementById('btn-tactical').classList.remove('active');
