@@ -441,6 +441,7 @@
       <div class="panel-tab"        id="tab-military"  onclick="switchTab('military')">MILITARY</div>
       <div class="panel-tab"        id="tab-intel"     onclick="switchTab('intel')">INTEL</div>
       <div class="panel-tab"        id="tab-economic"  onclick="switchTab('economic')">ECONOMIC</div>
+      <div class="panel-tab"        id="tab-geography" onclick="switchTab('geography')">GEO</div>
     </div>
 
     <!-- TAB 1: OVERVIEW -->
@@ -526,9 +527,29 @@
 
     <!-- TAB 4: ECONOMIC -->
     <div class="tab-content" id="content-economic">
-      <div class="placeholder-section">
-        <div class="placeholder-icon">📊</div>
-        <div class="placeholder-text">ECONOMIC INTELLIGENCE<br>MODULE PENDING<br><br>PHASE 5 DEPLOYMENT<br>TRADE DATA // SANCTIONS<br>INFLATION // FOREX<br>COMING SOON</div>
+      <div class="panel-section">
+        <div class="section-title">Trade Profile</div>
+        <div class="stat-row"><span class="stat-label">TOP EXPORTS</span><span class="stat-value" id="eco-exports" style="font-family:'Share Tech Mono',monospace;font-size:9px;text-align:right;line-height:1.5;">—</span></div>
+        <div class="stat-row"><span class="stat-label">TOP IMPORTS</span><span class="stat-value" id="eco-imports" style="font-family:'Share Tech Mono',monospace;font-size:9px;text-align:right;line-height:1.5;">—</span></div>
+      </div>
+      <div class="panel-section">
+        <div class="section-title">Trading Partners</div>
+        <div id="eco-partners" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#4a8a68;line-height:1.8;">—</div>
+      </div>
+    </div>
+
+    <!-- TAB 5: GEOGRAPHY -->
+    <div class="tab-content" id="content-geography">
+      <div class="panel-section">
+        <div class="section-title">Territory</div>
+        <div class="stat-row"><span class="stat-label">LAND AREA</span><span class="stat-value" id="geo-area">—</span></div>
+        <div class="stat-row"><span class="stat-label">COASTLINE</span><span class="stat-value" id="geo-coast">—</span></div>
+        <div class="stat-row"><span class="stat-label">LANDLOCKED</span><span class="stat-value" id="geo-landlocked">—</span></div>
+      </div>
+      <div class="panel-section">
+        <div class="section-title">Environment</div>
+        <div class="stat-row"><span class="stat-label">CLIMATE</span><span class="stat-value" id="geo-climate" style="font-family:'Share Tech Mono',monospace;font-size:9px;text-align:right;line-height:1.5;">—</span></div>
+        <div class="stat-row"><span class="stat-label">TERRAIN</span><span class="stat-value" id="geo-terrain" style="font-family:'Share Tech Mono',monospace;font-size:9px;text-align:right;line-height:1.5;">—</span></div>
       </div>
     </div>
   </div>
@@ -886,7 +907,7 @@
     }
 
     function switchTab(tab) {
-      ['overview','military','intel','economic'].forEach(t => {
+      ['overview','military','intel','economic','geography'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
         document.getElementById(`content-${t}`).classList.toggle('active', t === tab);
       });
@@ -927,6 +948,12 @@
       document.getElementById('pol-election-type').textContent = '—';
       document.getElementById('pol-risk-container').innerHTML = '';
       document.getElementById('news-container').innerHTML = '<div class="loading">// FETCHING INTELLIGENCE...</div>';
+      document.getElementById('eco-exports').textContent = '—';
+      document.getElementById('eco-imports').textContent = '—';
+      document.getElementById('eco-partners').innerHTML = '—';
+      ['geo-area','geo-coast','geo-landlocked','geo-climate','geo-terrain'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
 
       // Show territory note if applicable
       if (dataIso !== iso) {
@@ -1050,6 +1077,23 @@
           document.getElementById('stability-val').textContent = score;
           document.getElementById('stability-val').style.color = col;
         });
+
+      // Economic
+      const trade = TRADE_DATA[dataIso];
+      document.getElementById('eco-exports').textContent = trade ? trade.exports : 'Data unavailable';
+      document.getElementById('eco-imports').textContent = trade ? trade.imports : 'Data unavailable';
+      document.getElementById('eco-partners').innerHTML = trade
+        ? trade.partners.split(' · ').map(p => `<div style="color:#00ff88;padding:1px 0;">${p}</div>`).join('')
+        : '<span style="color:#2a4a38;">No data</span>';
+
+      // Geography
+      const geo = GEO_DATA[dataIso];
+      document.getElementById('geo-area').textContent = geo ? geo.area : 'N/A';
+      document.getElementById('geo-coast').textContent = geo ? (geo.coast === '0 km' ? 'None' : geo.coast) : 'N/A';
+      document.getElementById('geo-landlocked').textContent = geo ? geo.landlocked : 'N/A';
+      document.getElementById('geo-landlocked').style.color = geo && geo.landlocked === 'Yes' ? '#ffaa00' : '#00ff88';
+      document.getElementById('geo-climate').textContent = geo ? geo.climate : 'N/A';
+      document.getElementById('geo-terrain').textContent = geo ? geo.terrain : 'N/A';
 
       fetchNews(name, dataIso);
     }
@@ -1329,6 +1373,143 @@
     globe.controls().addEventListener('start', () => { globe.controls().autoRotate = false; });
 
     // ── Territory parent lookup ───────────────────────────────────────────────────
+    // ─── TRADE DATA (~60 nations) ────────────────────────────────────────────────
+    const TRADE_DATA = {
+      us:{exports:'Machinery, Aircraft, Petroleum, Soybeans, Vehicles',imports:'Electronics, Vehicles, Machinery, Pharmaceuticals, Oil',partners:'🇨🇳 China · 🇨🇦 Canada · 🇲🇽 Mexico · 🇩🇪 Germany · 🇯🇵 Japan'},
+      cn:{exports:'Electronics, Machinery, Textiles, Steel, Plastics',imports:'Semiconductors, Oil, Iron Ore, Soybeans, Gas',partners:'🇺🇸 USA · 🇩🇪 Germany · 🇯🇵 Japan · 🇰🇷 S. Korea · 🇦🇺 Australia'},
+      de:{exports:'Vehicles, Machinery, Pharmaceuticals, Electronics, Chemicals',imports:'Natural Gas, Vehicles, Electronics, Oil, Machinery',partners:'🇨🇳 China · 🇺🇸 USA · 🇫🇷 France · 🇳🇱 Netherlands · 🇵🇱 Poland'},
+      gb:{exports:'Pharmaceuticals, Machinery, Vehicles, Aircraft, Chemicals',imports:'Vehicles, Petroleum, Electronics, Machinery, Clothing',partners:'🇺🇸 USA · 🇩🇪 Germany · 🇳🇱 Netherlands · 🇫🇷 France · 🇨🇳 China'},
+      fr:{exports:'Aircraft, Pharmaceuticals, Vehicles, Machinery, Wine',imports:'Petroleum, Vehicles, Electronics, Natural Gas, Machinery',partners:'🇩🇪 Germany · 🇺🇸 USA · 🇮🇹 Italy · 🇧🇪 Belgium · 🇪🇸 Spain'},
+      jp:{exports:'Vehicles, Machinery, Electronics, Chemicals, Steel',imports:'Petroleum, LNG, Coal, Semiconductors, Food',partners:'🇺🇸 USA · 🇨🇳 China · 🇦🇺 Australia · 🇰🇷 S. Korea · 🇸🇦 Saudi Arabia'},
+      ru:{exports:'Petroleum, Natural Gas, Coal, Steel, Wheat',imports:'Vehicles, Machinery, Electronics, Pharmaceuticals, Food',partners:'🇨🇳 China · 🇩🇪 Germany · 🇹🇷 Turkey · 🇮🇳 India · 🇮🇹 Italy'},
+      in:{exports:'Pharmaceuticals, Textiles, IT Services, Gems, Vehicles',imports:'Crude Oil, Gold, Electronics, Coal, Machinery',partners:'🇺🇸 USA · 🇨🇳 China · 🇦🇪 UAE · 🇸🇦 Saudi Arabia · 🇷🇺 Russia'},
+      br:{exports:'Soybeans, Iron Ore, Petroleum, Sugar, Beef',imports:'Petroleum, Electronics, Vehicles, Machinery, Chemicals',partners:'🇨🇳 China · 🇺🇸 USA · 🇦🇷 Argentina · 🇩🇪 Germany · 🇳🇱 Netherlands'},
+      ca:{exports:'Petroleum, Vehicles, Aircraft, Lumber, Wheat',imports:'Vehicles, Electronics, Machinery, Petroleum, Plastics',partners:'🇺🇸 USA · 🇨🇳 China · 🇬🇧 UK · 🇯🇵 Japan · 🇲🇽 Mexico'},
+      au:{exports:'Iron Ore, Coal, LNG, Gold, Beef',imports:'Petroleum, Vehicles, Electronics, Pharmaceuticals, Machinery',partners:'🇨🇳 China · 🇯🇵 Japan · 🇰🇷 S. Korea · 🇮🇳 India · 🇺🇸 USA'},
+      kr:{exports:'Semiconductors, Vehicles, Ships, Steel, Petrochemicals',imports:'Crude Oil, Semiconductors, LNG, Machinery, Steel',partners:'🇨🇳 China · 🇺🇸 USA · 🇻🇳 Vietnam · 🇯🇵 Japan · 🇦🇺 Australia'},
+      es:{exports:'Vehicles, Machinery, Pharmaceuticals, Fruit, Wine',imports:'Petroleum, Vehicles, Electronics, Natural Gas, Machinery',partners:'🇫🇷 France · 🇩🇪 Germany · 🇮🇹 Italy · 🇵🇹 Portugal · 🇬🇧 UK'},
+      it:{exports:'Machinery, Vehicles, Pharmaceuticals, Clothing, Steel',imports:'Petroleum, Vehicles, Natural Gas, Electronics, Machinery',partners:'🇩🇪 Germany · 🇫🇷 France · 🇺🇸 USA · 🇨🇳 China · 🇪🇸 Spain'},
+      mx:{exports:'Vehicles, Electronics, Machinery, Oil, Medical Devices',imports:'Electronics, Machinery, Oil, Vehicles, Plastics',partners:'🇺🇸 USA · 🇨🇳 China · 🇩🇪 Germany · 🇯🇵 Japan · 🇰🇷 S. Korea'},
+      id:{exports:'Coal, Palm Oil, LNG, Nickel, Copper',imports:'Petroleum, Electronics, Machinery, Iron, Wheat',partners:'🇨🇳 China · 🇺🇸 USA · 🇯🇵 Japan · 🇸🇬 Singapore · 🇮🇳 India'},
+      sa:{exports:'Crude Oil, Petroleum Products, Petrochemicals, Plastics, Dates',imports:'Machinery, Vehicles, Electronics, Steel, Food',partners:'🇨🇳 China · 🇯🇵 Japan · 🇮🇳 India · 🇰🇷 S. Korea · 🇺🇸 USA'},
+      tr:{exports:'Vehicles, Machinery, Iron, Textiles, Electronics',imports:'Petroleum, Natural Gas, Gold, Machinery, Electronics',partners:'🇩🇪 Germany · 🇺🇸 USA · 🇬🇧 UK · 🇮🇹 Italy · 🇮🇶 Iraq'},
+      nl:{exports:'Petroleum Products, Machinery, Electronics, Chemicals, Food',imports:'Petroleum, Electronics, Machinery, Vehicles, Chemicals',partners:'🇩🇪 Germany · 🇧🇪 Belgium · 🇬🇧 UK · 🇫🇷 France · 🇺🇸 USA'},
+      ch:{exports:'Pharmaceuticals, Machinery, Watches, Chemicals, Electronics',imports:'Vehicles, Machinery, Electronics, Petroleum, Metals',partners:'🇩🇪 Germany · 🇺🇸 USA · 🇬🇧 UK · 🇨🇳 China · 🇮🇹 Italy'},
+      se:{exports:'Vehicles, Machinery, Paper, Iron, Pharmaceuticals',imports:'Petroleum, Electronics, Vehicles, Machinery, Clothing',partners:'🇩🇪 Germany · 🇳🇴 Norway · 🇺🇸 USA · 🇫🇮 Finland · 🇩🇰 Denmark'},
+      no:{exports:'Petroleum, Natural Gas, Fish, Metals, Machinery',imports:'Machinery, Electronics, Vehicles, Petroleum, Food',partners:'🇩🇪 Germany · 🇸🇪 Sweden · 🇬🇧 UK · 🇳🇱 Netherlands · 🇺🇸 USA'},
+      pl:{exports:'Machinery, Electronics, Vehicles, Furniture, Chemicals',imports:'Petroleum, Electronics, Machinery, Vehicles, Chemicals',partners:'🇩🇪 Germany · 🇨🇿 Czech Rep. · 🇬🇧 UK · 🇫🇷 France · 🇳🇱 Netherlands'},
+      za:{exports:'Gold, Platinum, Iron Ore, Coal, Diamonds',imports:'Petroleum, Electronics, Machinery, Vehicles, Chemicals',partners:'🇨🇳 China · 🇩🇪 Germany · 🇺🇸 USA · 🇯🇵 Japan · 🇮🇳 India'},
+      ar:{exports:'Soybeans, Corn, Beef, Petroleum, Wheat',imports:'Electronics, Machinery, Vehicles, Chemicals, Plastics',partners:'🇧🇷 Brazil · 🇨🇳 China · 🇺🇸 USA · 🇩🇪 Germany · 🇨🇱 Chile'},
+      eg:{exports:'Petroleum, Textiles, Chemicals, Agricultural Products, Gold',imports:'Petroleum, Food, Machinery, Electronics, Vehicles',partners:'🇺🇸 USA · 🇩🇪 Germany · 🇨🇳 China · 🇸🇦 Saudi Arabia · 🇮🇹 Italy'},
+      ae:{exports:'Petroleum, Natural Gas, Re-exports, Aluminium, Dates',imports:'Electronics, Vehicles, Machinery, Jewellery, Pharmaceuticals',partners:'🇮🇳 India · 🇨🇳 China · 🇺🇸 USA · 🇯🇵 Japan · 🇸🇦 Saudi Arabia'},
+      th:{exports:'Electronics, Vehicles, Machinery, Rubber, Gold',imports:'Crude Oil, Electronics, Machinery, Iron, Chemicals',partners:'🇨🇳 China · 🇺🇸 USA · 🇯🇵 Japan · 🇲🇾 Malaysia · 🇦🇺 Australia'},
+      my:{exports:'Electronics, Petroleum, LNG, Palm Oil, Rubber',imports:'Electronics, Petroleum, Machinery, Chemicals, Iron',partners:'🇸🇬 Singapore · 🇨🇳 China · 🇺🇸 USA · 🇯🇵 Japan · 🇹🇭 Thailand'},
+      sg:{exports:'Electronics, Pharmaceuticals, Petroleum, Machinery, Chemicals',imports:'Electronics, Petroleum, Machinery, Chemicals, Vehicles',partners:'🇨🇳 China · 🇺🇸 USA · 🇲🇾 Malaysia · 🇭🇰 Hong Kong · 🇮🇳 India'},
+      ng:{exports:'Petroleum, LNG, Cocoa, Rubber, Sesame',imports:'Machinery, Petroleum Products, Electronics, Vehicles, Food',partners:'🇮🇳 India · 🇳🇱 Netherlands · 🇪🇸 Spain · 🇺🇸 USA · 🇫🇷 France'},
+      vn:{exports:'Electronics, Machinery, Clothing, Footwear, Coffee',imports:'Electronics, Machinery, Petroleum, Steel, Fabrics',partners:'🇺🇸 USA · 🇨🇳 China · 🇯🇵 Japan · 🇰🇷 S. Korea · 🇩🇪 Germany'},
+      pk:{exports:'Textiles, Clothing, Rice, Leather, Sports Goods',imports:'Petroleum, Machinery, Electronics, Iron, Vehicles',partners:'🇨🇳 China · 🇺🇸 USA · 🇦🇪 UAE · 🇬🇧 UK · 🇦🇫 Afghanistan'},
+      il:{exports:'Diamonds, Electronics, Software, Pharmaceuticals, Chemicals',imports:'Petroleum, Electronics, Vehicles, Diamonds, Chemicals',partners:'🇺🇸 USA · 🇨🇳 China · 🇬🇧 UK · 🇩🇪 Germany · 🇧🇪 Belgium'},
+      ir:{exports:'Petroleum, Petrochemicals, Gas, Fruits, Pistachios',imports:'Electronics, Machinery, Vehicles, Iron, Food',partners:'🇨🇳 China · 🇮🇶 Iraq · 🇹🇷 Turkey · 🇦🇪 UAE · 🇦🇫 Afghanistan'},
+      iq:{exports:'Crude Oil, Gold, Dates, Crude Materials',imports:'Food, Machinery, Electronics, Vehicles, Pharmaceuticals',partners:'🇨🇳 China · 🇮🇳 India · 🇺🇸 USA · 🇰🇷 S. Korea · 🇬🇷 Greece'},
+      at:{exports:'Machinery, Vehicles, Paper, Pharmaceuticals, Electronics',imports:'Petroleum, Vehicles, Electronics, Machinery, Chemicals',partners:'🇩🇪 Germany · 🇮🇹 Italy · 🇨🇿 Czech Rep. · 🇨🇭 Switzerland · 🇺🇸 USA'},
+      be:{exports:'Pharmaceuticals, Vehicles, Electronics, Chemicals, Machinery',imports:'Petroleum, Electronics, Machinery, Vehicles, Chemicals',partners:'🇩🇪 Germany · 🇳🇱 Netherlands · 🇫🇷 France · 🇬🇧 UK · 🇺🇸 USA'},
+      cl:{exports:'Copper, Lithium, Fruit, Salmon, Wine',imports:'Petroleum, Electronics, Vehicles, Machinery, Natural Gas',partners:'🇨🇳 China · 🇺🇸 USA · 🇯🇵 Japan · 🇰🇷 S. Korea · 🇧🇷 Brazil'},
+      co:{exports:'Petroleum, Coal, Coffee, Gold, Bananas',imports:'Electronics, Machinery, Vehicles, Chemicals, Petroleum',partners:'🇺🇸 USA · 🇨🇳 China · 🇵🇦 Panama · 🇲🇽 Mexico · 🇩🇪 Germany'},
+      cz:{exports:'Vehicles, Machinery, Electronics, Chemicals, Iron',imports:'Electronics, Machinery, Petroleum, Vehicles, Chemicals',partners:'🇩🇪 Germany · 🇸🇰 Slovakia · 🇵🇱 Poland · 🇫🇷 France · 🇦🇹 Austria'},
+      dk:{exports:'Machinery, Pharmaceuticals, Food, Fish, Electronics',imports:'Petroleum, Electronics, Machinery, Vehicles, Chemicals',partners:'🇩🇪 Germany · 🇸🇪 Sweden · 🇺🇸 USA · 🇬🇧 UK · 🇨🇳 China'},
+      fi:{exports:'Machinery, Electronics, Paper, Ships, Chemicals',imports:'Petroleum, Electronics, Vehicles, Machinery, Iron',partners:'🇩🇪 Germany · 🇸🇪 Sweden · 🇳🇱 Netherlands · 🇨🇳 China · 🇺🇸 USA'},
+      gr:{exports:'Petroleum Products, Aluminium, Pharmaceuticals, Food, Clothing',imports:'Petroleum, Vehicles, Electronics, Machinery, Chemicals',partners:'🇮🇹 Italy · 🇩🇪 Germany · 🇹🇷 Turkey · 🇨🇾 Cyprus · 🇧🇬 Bulgaria'},
+      hu:{exports:'Vehicles, Electronics, Machinery, Pharmaceuticals, Iron',imports:'Electronics, Machinery, Petroleum, Vehicles, Chemicals',partners:'🇩🇪 Germany · 🇮🇹 Italy · 🇷🇴 Romania · 🇸🇰 Slovakia · 🇦🇹 Austria'},
+      ke:{exports:'Tea, Flowers, Coffee, Vegetables, Petroleum Products',imports:'Petroleum, Machinery, Vehicles, Electronics, Iron',partners:'🇺🇬 Uganda · 🇺🇸 USA · 🇳🇱 Netherlands · 🇵🇰 Pakistan · 🇬🇧 UK'},
+      kz:{exports:'Petroleum, Uranium, Copper, Iron, Wheat',imports:'Machinery, Electronics, Vehicles, Chemicals, Food',partners:'🇨🇳 China · 🇮🇹 Italy · 🇳🇱 Netherlands · 🇷🇺 Russia · 🇨🇭 Switzerland'},
+      ma:{exports:'Phosphates, Vehicles, Electronics, Clothing, Fish',imports:'Petroleum, Electronics, Machinery, Wheat, Plastics',partners:'🇪🇸 Spain · 🇫🇷 France · 🇮🇳 India · 🇺🇸 USA · 🇨🇳 China'},
+      pe:{exports:'Copper, Gold, Zinc, Fish, Coffee',imports:'Petroleum, Electronics, Machinery, Vehicles, Chemicals',partners:'🇨🇳 China · 🇺🇸 USA · 🇨🇦 Canada · 🇿🇦 S. Africa · 🇧🇷 Brazil'},
+      ph:{exports:'Electronics, Machinery, Gold, Coconut Oil, Clothing',imports:'Electronics, Petroleum, Iron, Vehicles, Machinery',partners:'🇯🇵 Japan · 🇺🇸 USA · 🇨🇳 China · 🇭🇰 Hong Kong · 🇸🇬 Singapore'},
+      pt:{exports:'Vehicles, Machinery, Oil Products, Pharmaceuticals, Wine',imports:'Petroleum, Electronics, Vehicles, Machinery, Chemicals',partners:'🇪🇸 Spain · 🇫🇷 France · 🇩🇪 Germany · 🇺🇸 USA · 🇬🇧 UK'},
+      qa:{exports:'LNG, Petroleum, Petrochemicals, Fertilizers, Steel',imports:'Machinery, Electronics, Vehicles, Food, Chemicals',partners:'🇯🇵 Japan · 🇰🇷 S. Korea · 🇨🇳 China · 🇮🇳 India · 🇸🇬 Singapore'},
+      ro:{exports:'Vehicles, Machinery, Electronics, Petroleum, Wheat',imports:'Vehicles, Electronics, Machinery, Petroleum, Chemicals',partners:'🇩🇪 Germany · 🇮🇹 Italy · 🇫🇷 France · 🇭🇺 Hungary · 🇧🇬 Bulgaria'},
+      ua:{exports:'Iron, Wheat, Corn, Sunflower Oil, Steel',imports:'Petroleum, Electronics, Machinery, Vehicles, Coal',partners:'🇨🇳 China · 🇵🇱 Poland · 🇩🇪 Germany · 🇹🇷 Turkey · 🇮🇹 Italy'},
+      tz:{exports:'Gold, Coffee, Tea, Cashews, Tobacco',imports:'Petroleum, Electronics, Machinery, Vehicles, Iron',partners:'🇮🇳 India · 🇨🇳 China · 🇦🇪 UAE · 🇰🇪 Kenya · 🇹🇿 Tanzania'},
+    };
+
+    // ─── GEOGRAPHY DATA (~80 nations) ───────────────────────────────────────────
+    const GEO_DATA = {
+      us:{area:'9,833,517 km²',coast:'19,924 km',landlocked:'No',climate:'Temperate, arctic, tropical',terrain:'Plains, mountains, deserts, forests'},
+      cn:{area:'9,596,960 km²',coast:'14,500 km',landlocked:'No',climate:'Varies — tropical south to subarctic north',terrain:'Plateaus, plains, mountains, desert'},
+      ru:{area:'17,098,242 km²',coast:'37,653 km',landlocked:'No',climate:'Subarctic, continental, tundra',terrain:'Vast plains, taiga, tundra, mountains'},
+      ca:{area:'9,984,670 km²',coast:'202,080 km',landlocked:'No',climate:'Temperate to subarctic',terrain:'Plains, boreal forest, tundra, mountains'},
+      br:{area:'8,515,767 km²',coast:'7,491 km',landlocked:'No',climate:'Tropical, semi-arid, subtropical',terrain:'Amazon basin, highlands, coastal ranges'},
+      au:{area:'7,692,024 km²',coast:'25,760 km',landlocked:'No',climate:'Arid, tropical north, temperate south',terrain:'Desert, scrubland, coastal plains'},
+      in:{area:'3,287,263 km²',coast:'7,517 km',landlocked:'No',climate:'Tropical monsoon, arid, alpine',terrain:'Himalayas, Indo-Gangetic plain, Deccan Plateau'},
+      ar:{area:'2,780,400 km²',coast:'4,989 km',landlocked:'No',climate:'Arid, semi-arid, temperate, subpolar',terrain:'Andes, Pampas, Patagonia, Chaco'},
+      kz:{area:'2,724,900 km²',coast:'0 km',landlocked:'Yes',climate:'Continental — extreme winters, hot summers',terrain:'Steppes, deserts, mountains'},
+      dz:{area:'2,381,741 km²',coast:'998 km',landlocked:'No',climate:'Arid desert, Mediterranean north',terrain:'Sahara desert, Atlas Mountains, coastal strip'},
+      cd:{area:'2,344,858 km²',coast:'37 km',landlocked:'No',climate:'Equatorial, tropical',terrain:'Congo Basin rainforest, plateaus, mountains'},
+      sa:{area:'2,149,690 km²',coast:'2,640 km',landlocked:'No',climate:'Harsh desert',terrain:'Mostly desert, some highlands'},
+      mx:{area:'1,964,375 km²',coast:'9,330 km',landlocked:'No',climate:'Tropical, arid, semi-arid, temperate',terrain:'High plateaus, mountains, coastal lowlands'},
+      id:{area:'1,904,569 km²',coast:'54,716 km',landlocked:'No',climate:'Tropical, hot and humid',terrain:'Islands, coastal lowlands, mountains, rainforest'},
+      sd:{area:'1,861,484 km²',coast:'853 km',landlocked:'No',climate:'Hot desert, tropical south',terrain:'Nile Valley, desert, savanna'},
+      ly:{area:'1,759,540 km²',coast:'1,770 km',landlocked:'No',climate:'Mediterranean north, Sahara south',terrain:'Mostly desert and plateau'},
+      ir:{area:'1,648,195 km²',coast:'2,440 km',landlocked:'No',climate:'Arid, semi-arid; subtropical north',terrain:'Central plateau, Zagros & Alborz mountains'},
+      mn:{area:'1,564,116 km²',coast:'0 km',landlocked:'Yes',climate:'Extreme continental — cold winters',terrain:'Gobi Desert, steppes, mountains'},
+      pe:{area:'1,285,216 km²',coast:'2,414 km',landlocked:'No',climate:'Varied — arid coast, tropical Amazon, alpine',terrain:'Andes, Amazon jungle, coastal desert'},
+      ao:{area:'1,246,700 km²',coast:'1,600 km',landlocked:'No',climate:'Tropical semi-arid, equatorial north',terrain:'Narrow coastal plain, plateau, highlands'},
+      et:{area:'1,104,300 km²',coast:'0 km',landlocked:'Yes',climate:'Tropical monsoon, semi-arid',terrain:'High plateau, Great Rift Valley, lowlands'},
+      za:{area:'1,219,090 km²',coast:'2,798 km',landlocked:'No',climate:'Semi-arid, subtropical, Mediterranean',terrain:'Plateau, Great Escarpment, coastal plains'},
+      ml:{area:'1,240,192 km²',coast:'0 km',landlocked:'Yes',climate:'Hot desert, tropical south',terrain:'Desert north, savanna south, Niger delta'},
+      ng:{area:'923,768 km²',coast:'853 km',landlocked:'No',climate:'Tropical, equatorial south, arid north',terrain:'Coastal lowlands, savanna, Sahel'},
+      tz:{area:'945,087 km²',coast:'1,424 km',landlocked:'No',climate:'Tropical, semi-arid interior',terrain:'Coastal plains, central plateau, mountains'},
+      eg:{area:'1,001,450 km²',coast:'2,450 km',landlocked:'No',climate:'Hot desert',terrain:'Nile Valley, Sinai Peninsula, Eastern Desert'},
+      fr:{area:'551,695 km²',coast:'3,427 km',landlocked:'No',climate:'Temperate; Mediterranean south',terrain:'Plains north, Pyrenees south, Alps east'},
+      th:{area:'513,120 km²',coast:'3,219 km',landlocked:'No',climate:'Tropical monsoon',terrain:'Central plain, mountains north, Khorat Plateau'},
+      sp:{area:'505,990 km²',coast:'4,964 km',landlocked:'No',climate:'Mediterranean, semi-arid, temperate',terrain:'Meseta plateau, mountains, coastal plains'},
+      es:{area:'505,990 km²',coast:'4,964 km',landlocked:'No',climate:'Mediterranean, semi-arid, temperate',terrain:'Meseta plateau, mountains, coastal plains'},
+      se:{area:'450,295 km²',coast:'3,218 km',landlocked:'No',climate:'Temperate in south, subarctic in north',terrain:'Mostly flat or gently rolling lowlands, mountains west'},
+      by:{area:'207,600 km²',coast:'0 km',landlocked:'Yes',climate:'Cold continental',terrain:'Flat, much of which is forested'},
+      uy:{area:'176,215 km²',coast:'660 km',landlocked:'No',climate:'Warm temperate',terrain:'Rolling plains, low hills, coastal lowlands'},
+      sy:{area:'185,180 km²',coast:'193 km',landlocked:'No',climate:'Semi-arid, arid east, Mediterranean west',terrain:'Coastal plains, mountains, Syrian Desert'},
+      kh:{area:'181,035 km²',coast:'443 km',landlocked:'No',climate:'Tropical monsoon',terrain:'Tonle Sap lake basin, Mekong plain, mountains'},
+      cm:{area:'475,442 km²',coast:'402 km',landlocked:'No',climate:'Equatorial south, semi-arid north',terrain:'Coastal plain, mountains, savanna'},
+      de:{area:'357,114 km²',coast:'2,389 km',landlocked:'No',climate:'Temperate marine',terrain:'Lowlands north, uplands central, Bavarian Alps south'},
+      jp:{area:'377,915 km²',coast:'29,751 km',landlocked:'No',climate:'Varies — tropical south, cool north',terrain:'Mostly rugged mountains; some plains, coast'},
+      my:{area:'329,847 km²',coast:'4,675 km',landlocked:'No',climate:'Tropical, hot and humid',terrain:'Coastal plains, rainforest, mountains'},
+      vn:{area:'331,210 km²',coast:'3,444 km',landlocked:'No',climate:'Tropical monsoon south, warm north',terrain:'Delta regions, central highlands, mountains'},
+      no:{area:'323,802 km²',coast:'25,148 km',landlocked:'No',climate:'Temperate along coast, subarctic inland',terrain:'Fjords, mountains, plateaus'},
+      pk:{area:'881,913 km²',coast:'1,046 km',landlocked:'No',climate:'Arid, semi-arid, temperate north',terrain:'Indus plain, mountains, plateau, desert'},
+      ph:{area:'300,000 km²',coast:'36,289 km',landlocked:'No',climate:'Tropical — rainy, dry seasons',terrain:'Rugged mountains, coastal lowlands, islands'},
+      it:{area:'301,340 km²',coast:'7,600 km',landlocked:'No',climate:'Mediterranean, alpine north',terrain:'Mostly rugged and mountainous, Po Valley north'},
+      gb:{area:'242,495 km²',coast:'12,429 km',landlocked:'No',climate:'Temperate maritime',terrain:'Hills, moors, lowlands, coastal cliffs'},
+      gh:{area:'238,533 km²',coast:'539 km',landlocked:'No',climate:'Tropical — dry north, wet south',terrain:'Low plains, Akwapim Hills, coastal savanna'},
+      ro:{area:'238,397 km²',coast:'225 km',landlocked:'No',climate:'Temperate continental',terrain:'Carpathian mountains, Transylvanian basin, plains'},
+      cl:{area:'756,102 km²',coast:'6,435 km',landlocked:'No',climate:'Arid north, Mediterranean, subarctic south',terrain:'Andes, Atacama Desert, coastal range'},
+      ke:{area:'580,367 km²',coast:'536 km',landlocked:'No',climate:'Tropical, semi-arid, highland',terrain:'Low coastal plain, central highlands, Great Rift Valley'},
+      af:{area:'652,230 km²',coast:'0 km',landlocked:'Yes',climate:'Arid, semi-arid; cold winters',terrain:'Rugged mountains, Hindu Kush, central plateau'},
+      ua:{area:'603,550 km²',coast:'2,782 km',landlocked:'No',climate:'Temperate continental',terrain:'Fertile steppes, Carpathians, coastal lowlands'},
+      iq:{area:'438,317 km²',coast:'58 km',landlocked:'No',climate:'Hot desert, mild winters',terrain:'Tigris-Euphrates plain, western desert, mountains north'},
+      ye:{area:'527,968 km²',coast:'1,906 km',landlocked:'No',climate:'Arid, hot; cooler highlands',terrain:'Coastal plain, mountains, desert interior'},
+      tr:{area:'783,562 km²',coast:'7,200 km',landlocked:'No',climate:'Temperate Mediterranean west, continental east',terrain:'High central plateau, narrow coastal plains, mountains'},
+      il:{area:'20,770 km²',coast:'273 km',landlocked:'No',climate:'Mediterranean, semi-arid south',terrain:'Negev Desert, coastal plain, highlands, Jordan Valley'},
+      nl:{area:'41,543 km²',coast:'451 km',landlocked:'No',climate:'Temperate maritime',terrain:'Mostly flat, below sea level west, hills east'},
+      ch:{area:'41,285 km²',coast:'0 km',landlocked:'Yes',climate:'Temperate; alpine in mountains',terrain:'Alps, Jura Mountains, central plateau'},
+      at:{area:'83,871 km²',coast:'0 km',landlocked:'Yes',climate:'Temperate continental',terrain:'Alps dominate; lowlands in east'},
+      be:{area:'30,528 km²',coast:'67 km',landlocked:'No',climate:'Temperate maritime',terrain:'Coastal plain, central plateau, Ardennes hills'},
+      cz:{area:'78,866 km²',coast:'0 km',landlocked:'Yes',climate:'Temperate continental',terrain:'Bohemian Plateau, rolling hills, mountains'},
+      hu:{area:'93,028 km²',coast:'0 km',landlocked:'Yes',climate:'Temperate continental',terrain:'Mostly flat, Great Plain east, Danube valley'},
+      pl:{area:'312,685 km²',coast:'491 km',landlocked:'No',climate:'Temperate, continental',terrain:'Lowland plains, Sudeten & Carpathian mountains south'},
+      gr:{area:'131,957 km²',coast:'13,676 km',landlocked:'No',climate:'Mediterranean',terrain:'Mountains, islands, coastal plains'},
+      sg:{area:'728 km²',coast:'193 km',landlocked:'No',climate:'Tropical, hot and humid year-round',terrain:'Lowland, reclaimed land, some hills'},
+      ae:{area:'83,600 km²',coast:'1,318 km',landlocked:'No',climate:'Hot desert',terrain:'Desert, coastal sabkha, some mountains east'},
+      qa:{area:'11,586 km²',coast:'563 km',landlocked:'No',climate:'Arid, hot',terrain:'Mostly flat, low limestone plain'},
+      kw:{area:'17,818 km²',coast:'499 km',landlocked:'No',climate:'Dry desert, intensely hot summers',terrain:'Flat to slightly undulating desert'},
+      nz:{area:'268,838 km²',coast:'15,134 km',landlocked:'No',climate:'Temperate maritime',terrain:'Mountains, fjords, plains, volcanic areas'},
+      pt:{area:'92,212 km²',coast:'1,794 km',landlocked:'No',climate:'Mediterranean, maritime',terrain:'Mountains north, rolling plains south'},
+      dk:{area:'42,924 km²',coast:'7,314 km',landlocked:'No',climate:'Temperate maritime',terrain:'Low and flat, some hills'},
+      fi:{area:'338,145 km²',coast:'1,250 km',landlocked:'No',climate:'Cold temperate, subarctic north',terrain:'Low hills, lakes, boreal forest'},
+      ie:{area:'70,273 km²',coast:'2,500 km',landlocked:'No',climate:'Temperate maritime',terrain:'Mostly level, low mountains west and south'},
+      ma:{area:'710,850 km²',coast:'1,835 km',landlocked:'No',climate:'Mediterranean north, arid south',terrain:'Atlas Mountains, coastal plain, desert'},
+      co:{area:'1,141,748 km²',coast:'3,208 km',landlocked:'No',climate:'Tropical to alpine',terrain:'Andes, Caribbean coast, Amazon jungle, savanna'},
+    };
+
     const TERRITORY_PARENT = {
       'pr':'us','vi':'us','gu':'us','mp':'us','as':'us','um':'us',
       'gi':'gb','fk':'gb','sh':'gb','tc':'gb','ky':'gb','vg':'gb','ai':'gb','ms':'gb','bm':'gb','io':'gb','gs':'gb','ac':'gb',
