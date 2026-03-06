@@ -1060,7 +1060,7 @@
       subdomains: 'abcd'
     });
 
-    const TILE_TERRAIN = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    const TILE_TERRAIN = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}', {
       attribution: '© Esri'
     });
 
@@ -1256,7 +1256,7 @@
     // Domestic sources by ISO — English-language outlets only
     const DOMESTIC_SOURCES = {
       us: { domains: 'nytimes.com,washingtonpost.com,wsj.com,apnews.com,npr.org,politico.com' },
-      gb: { domains: 'bbc.co.uk,theguardian.com,telegraph.co.uk,thetimes.co.uk,independent.co.uk' },
+      gb: { domains: 'bbc.com,theguardian.com,independent.co.uk,telegraph.co.uk,standard.co.uk' },
       au: { domains: 'abc.net.au,smh.com.au,theaustralian.com.au,news.com.au' },
       ca: { domains: 'cbc.ca,globeandmail.com,nationalpost.com,thestar.com' },
       nz: { domains: 'nzherald.co.nz,stuff.co.nz,rnz.co.nz' },
