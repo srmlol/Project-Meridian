@@ -203,9 +203,8 @@
     .stability-bar-fill {
       height: 100%;
       border-radius: 2px;
-      background: linear-gradient(90deg, #ffaa00, #00ff88);
-      box-shadow: 0 0 8px #00ff88;
-      transition: width 0.8s ease;
+      transition: width 0.8s ease, background 0.8s ease;
+      box-shadow: 0 0 8px currentColor;
     }
 
     .stability-val {
@@ -370,6 +369,18 @@
       background: #1a0505;
     }
 
+    .alliance-badge.green-bloc {
+      border-color: #1a3020;
+      color: #00ff88;
+      background: #051209;
+    }
+
+    .alliance-badge.amber-bloc {
+      border-color: #3a2800;
+      color: #ffaa00;
+      background: #1a1200;
+    }
+
     .nuclear-warning {
       display: flex;
       align-items: center;
@@ -446,6 +457,26 @@
       padding: 20px;
       animation: pulse 1.5s ease-in-out infinite;
     }
+
+    /* Tooltip */
+    .meridian-tooltip {
+      background: #060e16 !important;
+      border: 1px solid #00ff8830 !important;
+      border-radius: 0 !important;
+      padding: 8px 12px !important;
+      box-shadow: 0 0 20px rgba(0,255,136,0.1) !important;
+      font-family: 'Share Tech Mono', monospace !important;
+      pointer-events: none;
+    }
+    .meridian-tooltip::before { display: none !important; }
+    .tt-flag { width: 32px; height: 20px; object-fit: cover; filter: saturate(0.8); display: block; margin-bottom: 5px; }
+    .tt-name { font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700; color: #e0f0e8; letter-spacing: 2px; margin-bottom: 4px; }
+    .tt-row { font-size: 9px; color: #5a8070; letter-spacing: 1px; margin-top: 2px; }
+    .tt-row span { color: #c8dfd0; }
+    .tt-stability { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+    .tt-bar-bg { flex: 1; height: 3px; background: #0d2a1a; }
+    .tt-bar-fill { height: 100%; }
+    .tt-score { font-size: 9px; color: #ffaa00; }
   </style>
 </head>
 <body>
@@ -509,9 +540,9 @@
         <div class="rating-badge">
           <span class="rating-number" id="mil-rank">—</span>
         </div>
-        <div class="rating-info">
+        <div>
           <div class="rating-title">Global Firepower Rank</div>
-          <div class="rating-sub" id="mil-sub">LOADING...</div>
+          <div class="rating-sub" id="mil-sub">—</div>
         </div>
       </div>
       <div class="mini-stats">
@@ -547,8 +578,8 @@
           <div class="stat-value" id="pol-gov" style="font-size:10px; font-family:'Rajdhani'">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Ruling Party</div>
-          <div class="stat-value" id="pol-party" style="font-size:10px; font-family:'Rajdhani'; color:#ff3333;">—</div>
+          <div class="stat-label">Head of State</div>
+          <div class="stat-value" id="pol-party" style="font-size:10px; font-family:'Rajdhani'; color:#00aaff;">—</div>
         </div>
       </div>
     </div>
@@ -569,6 +600,7 @@
   </div>
 
   <script>
+    // ─── CLOCK ──────────────────────────────────────────────────────────────────
     function updateClock() {
       const now = new Date();
       const h = String(now.getUTCHours()).padStart(2,'0');
@@ -579,6 +611,396 @@
     setInterval(updateClock, 1000);
     updateClock();
 
+    // ─── STATIC DATASETS ────────────────────────────────────────────────────────
+
+    // Defence spending: { iso2_lower: { budget_usd_bn, gdp_pct } }
+    // Sources: SIPRI 2023 / NATO estimates
+    const DEFENCE_DATA = {
+      us:  { budget: 886,  pct: 3.4 }, ru:  { budget: 109,  pct: 5.9 },
+      cn:  { budget: 224,  pct: 1.7 }, gb:  { budget: 68.5, pct: 2.3 },
+      de:  { budget: 66.8, pct: 1.7 }, fr:  { budget: 53.6, pct: 2.1 },
+      sa:  { budget: 75.8, pct: 7.1 }, in:  { budget: 83.6, pct: 2.4 },
+      jp:  { budget: 51.4, pct: 1.2 }, kr:  { budget: 47.9, pct: 2.8 },
+      ua:  { budget: 64.8, pct: 37.0 }, il:  { budget: 23.4, pct: 5.3 },
+      au:  { budget: 32.3, pct: 2.0 }, it:  { budget: 35.5, pct: 1.5 },
+      ca:  { budget: 26.9, pct: 1.4 }, es:  { budget: 20.3, pct: 1.3 },
+      br:  { budget: 20.1, pct: 1.2 }, tr:  { budget: 26.2, pct: 2.4 },
+      pl:  { budget: 21.3, pct: 3.9 }, nl:  { budget: 16.8, pct: 1.8 },
+      pk:  { budget: 10.4, pct: 3.5 }, no:  { budget: 9.7,  pct: 1.8 },
+      se:  { budget: 8.6,  pct: 1.5 }, fi:  { budget: 6.2,  pct: 2.2 },
+      gr:  { budget: 10.9, pct: 3.1 }, ro:  { budget: 6.8,  pct: 2.4 },
+      pt:  { budget: 4.2,  pct: 1.6 }, be:  { budget: 6.0,  pct: 1.2 },
+      dk:  { budget: 5.0,  pct: 1.6 }, nz:  { budget: 3.3,  pct: 1.5 },
+      ng:  { budget: 3.1,  pct: 0.8 }, za:  { budget: 2.9,  pct: 0.7 },
+      eg:  { budget: 7.4,  pct: 1.2 }, ir:  { budget: 10.3, pct: 2.1 },
+      iq:  { budget: 7.4,  pct: 5.9 }, mx:  { budget: 7.9,  pct: 0.5 },
+      id:  { budget: 9.0,  pct: 0.9 }, my:  { budget: 4.0,  pct: 1.0 },
+      th:  { budget: 7.3,  pct: 1.4 }, ph:  { budget: 4.3,  pct: 1.5 },
+      vn:  { budget: 7.0,  pct: 2.2 }, tw:  { budget: 19.1, pct: 2.6 },
+      kp:  { budget: 4.0,  pct: 26.0 }, mm:  { budget: 2.8,  pct: 4.0 },
+      kz:  { budget: 3.1,  pct: 1.2 }, dz:  { budget: 18.3, pct: 5.6 },
+      ma:  { budget: 5.4,  pct: 4.3 }, et:  { budget: 0.9,  pct: 0.7 },
+      gh:  { budget: 0.4,  pct: 0.5 }, ke:  { budget: 1.1,  pct: 1.3 },
+      cz:  { budget: 5.0,  pct: 2.2 }, hu:  { budget: 4.3,  pct: 2.4 },
+      sk:  { budget: 2.3,  pct: 2.3 }, bg:  { budget: 2.2,  pct: 2.5 },
+      ch:  { budget: 6.0,  pct: 0.8 }, at:  { budget: 3.8,  pct: 0.9 },
+      ar:  { budget: 2.4,  pct: 0.6 }, cl:  { budget: 4.7,  pct: 1.9 },
+      co:  { budget: 4.5,  pct: 3.1 }, pe:  { budget: 3.7,  pct: 1.8 },
+      ve:  { budget: 0.4,  pct: 1.3 }, uy:  { budget: 1.3,  pct: 2.0 },
+      af:  { budget: 0.1,  pct: 0.4 }, sy:  { budget: 1.8,  pct: 6.5 },
+      ly:  { budget: 0.3,  pct: 3.8 }, ye:  { budget: 0.5,  pct: 4.0 },
+      az:  { budget: 3.0,  pct: 5.4 }, am:  { budget: 0.8,  pct: 4.5 },
+      ge:  { budget: 0.9,  pct: 2.0 }, by:  { budget: 1.3,  pct: 1.5 },
+      rs:  { budget: 1.4,  pct: 2.4 }, hr:  { budget: 1.2,  pct: 1.8 },
+      si:  { budget: 0.8,  pct: 1.3 }, ba:  { budget: 0.3,  pct: 1.1 },
+      ee:  { budget: 1.0,  pct: 3.1 }, lv:  { budget: 0.9,  pct: 2.8 },
+      lt:  { budget: 1.5,  pct: 2.9 }, al:  { budget: 0.3,  pct: 1.7 },
+      me:  { budget: 0.1,  pct: 1.9 }, mk:  { budget: 0.2,  pct: 1.8 },
+      uz:  { budget: 1.6,  pct: 2.1 }, bd:  { budget: 4.9,  pct: 1.3 },
+      lk:  { budget: 1.4,  pct: 2.0 }, np:  { budget: 0.5,  pct: 1.5 },
+      qa:  { budget: 6.7,  pct: 4.2 }, ae:  { budget: 22.8, pct: 5.6 },
+      kw:  { budget: 8.7,  pct: 7.1 }, jo:  { budget: 2.3,  pct: 4.6 },
+      lb:  { budget: 0.5,  pct: 3.0 }, om:  { budget: 5.9,  pct: 8.1 },
+      bh:  { budget: 1.5,  pct: 4.1 }, tn:  { budget: 1.5,  pct: 2.3 },
+      sd:  { budget: 0.4,  pct: 1.2 }, so:  { budget: 0.1,  pct: 0.8 },
+      cd:  { budget: 0.3,  pct: 0.6 }, cm:  { budget: 0.5,  pct: 1.5 },
+      ao:  { budget: 1.8,  pct: 2.0 }, tz:  { budget: 0.7,  pct: 1.2 },
+      zw:  { budget: 0.2,  pct: 1.0 }, mz:  { budget: 0.2,  pct: 1.4 },
+      mu:  { budget: 0.1,  pct: 0.3 }, mg:  { budget: 0.1,  pct: 0.7 },
+      sg:  { budget: 11.6, pct: 3.1 }, hk:  { budget: 1.8,  pct: 0.5 },
+      mm:  { budget: 2.8,  pct: 4.0 }, kh:  { budget: 0.7,  pct: 2.3 },
+      la:  { budget: 0.3,  pct: 0.5 }, bn:  { budget: 0.5,  pct: 2.8 },
+    };
+
+    // Global Firepower data: { iso2: { rank, active, aircraft, naval, tier } }
+    const MILITARY_DATA = {
+      us:  { rank: 1,   active: '1.39M', aircraft: '13,300', naval: '484',  tier: 'SUPERPOWER' },
+      ru:  { rank: 2,   active: '1.32M', aircraft: '4,182',  naval: '598',  tier: 'GREAT POWER' },
+      cn:  { rank: 3,   active: '2.03M', aircraft: '3,304',  naval: '730',  tier: 'GREAT POWER' },
+      in:  { rank: 4,   active: '1.46M', aircraft: '2,182',  naval: '295',  tier: 'MAJOR POWER' },
+      kr:  { rank: 5,   active: '555K',  aircraft: '1,590',  naval: '234',  tier: 'MAJOR POWER' },
+      gb:  { rank: 6,   active: '150K',  aircraft: '733',    naval: '78',   tier: 'MAJOR POWER' },
+      jp:  { rank: 7,   active: '247K',  aircraft: '1,449',  naval: '167',  tier: 'MAJOR POWER' },
+      fr:  { rank: 8,   active: '205K',  aircraft: '1,050',  naval: '118',  tier: 'MAJOR POWER' },
+      ua:  { rank: 9,   active: '900K',  aircraft: '318',    naval: '38',   tier: 'REGIONAL POWER' },
+      br:  { rank: 10,  active: '368K',  aircraft: '664',    naval: '111',  tier: 'REGIONAL POWER' },
+      tr:  { rank: 11,  active: '355K',  aircraft: '1,067',  naval: '194',  tier: 'REGIONAL POWER' },
+      it:  { rank: 12,  active: '170K',  aircraft: '844',    naval: '143',  tier: 'REGIONAL POWER' },
+      eg:  { rank: 13,  active: '438K',  aircraft: '1,066',  naval: '318',  tier: 'REGIONAL POWER' },
+      de:  { rank: 14,  active: '183K',  aircraft: '623',    naval: '81',   tier: 'REGIONAL POWER' },
+      ir:  { rank: 15,  active: '610K',  aircraft: '551',    naval: '398',  tier: 'REGIONAL POWER' },
+      pk:  { rank: 16,  active: '654K',  aircraft: '1,387',  naval: '121',  tier: 'REGIONAL POWER' },
+      id:  { rank: 17,  active: '395K',  aircraft: '448',    naval: '282',  tier: 'REGIONAL POWER' },
+      au:  { rank: 18,  active: '59K',   aircraft: '469',    naval: '65',   tier: 'REGIONAL POWER' },
+      il:  { rank: 19,  active: '170K',  aircraft: '612',    naval: '67',   tier: 'REGIONAL POWER' },
+      sa:  { rank: 20,  active: '257K',  aircraft: '846',    naval: '55',   tier: 'REGIONAL POWER' },
+      pl:  { rank: 21,  active: '185K',  aircraft: '452',    naval: '87',   tier: 'REGIONAL POWER' },
+      th:  { rank: 22,  active: '361K',  aircraft: '580',    naval: '187',  tier: 'REGIONAL POWER' },
+      tw:  { rank: 23,  active: '169K',  aircraft: '750',    naval: '117',  tier: 'REGIONAL POWER' },
+      vn:  { rank: 24,  active: '470K',  aircraft: '409',    naval: '88',   tier: 'REGIONAL POWER' },
+      es:  { rank: 25,  active: '122K',  aircraft: '453',    naval: '122',  tier: 'REGIONAL POWER' },
+      ar:  { rank: 26,  active: '89K',   aircraft: '281',    naval: '89',   tier: 'REGIONAL POWER' },
+      ca:  { rank: 27,  active: '68K',   aircraft: '382',    naval: '63',   tier: 'REGIONAL POWER' },
+      gr:  { rank: 28,  active: '142K',  aircraft: '613',    naval: '115',  tier: 'REGIONAL POWER' },
+      dz:  { rank: 29,  active: '130K',  aircraft: '480',    naval: '83',   tier: 'REGIONAL POWER' },
+      my:  { rank: 30,  active: '114K',  aircraft: '247',    naval: '56',   tier: 'LIMITED FORCE' },
+      no:  { rank: 31,  active: '23K',   aircraft: '157',    naval: '72',   tier: 'LIMITED FORCE' },
+      ng:  { rank: 32,  active: '223K',  aircraft: '113',    naval: '126',  tier: 'LIMITED FORCE' },
+      se:  { rank: 33,  active: '24K',   aircraft: '185',    naval: '80',   tier: 'LIMITED FORCE' },
+      ph:  { rank: 34,  active: '125K',  aircraft: '261',    naval: '108',  tier: 'LIMITED FORCE' },
+      mm:  { rank: 35,  active: '406K',  aircraft: '302',    naval: '116',  tier: 'LIMITED FORCE' },
+      ro:  { rank: 36,  active: '68K',   aircraft: '128',    naval: '45',   tier: 'LIMITED FORCE' },
+      nl:  { rank: 37,  active: '41K',   aircraft: '160',    naval: '49',   tier: 'LIMITED FORCE' },
+      kp:  { rank: 38,  active: '1.28M', aircraft: '940',    naval: '967',  tier: 'ISOLATED FORCE' },
+      az:  { rank: 39,  active: '67K',   aircraft: '225',    naval: '26',   tier: 'LIMITED FORCE' },
+      cz:  { rank: 40,  active: '28K',   aircraft: '108',    naval: '0',    tier: 'LIMITED FORCE' },
+      za:  { rank: 41,  active: '73K',   aircraft: '222',    naval: '29',   tier: 'LIMITED FORCE' },
+      ae:  { rank: 42,  active: '63K',   aircraft: '680',    naval: '75',   tier: 'LIMITED FORCE' },
+      cl:  { rank: 43,  active: '80K',   aircraft: '278',    naval: '62',   tier: 'LIMITED FORCE' },
+      bd:  { rank: 44,  active: '204K',  aircraft: '200',    naval: '89',   tier: 'LIMITED FORCE' },
+      pt:  { rank: 45,  active: '27K',   aircraft: '87',     naval: '40',   tier: 'LIMITED FORCE' },
+      fi:  { rank: 46,  active: '23K',   aircraft: '160',    naval: '36',   tier: 'LIMITED FORCE' },
+      hu:  { rank: 47,  active: '23K',   aircraft: '62',     naval: '0',    tier: 'LIMITED FORCE' },
+      be:  { rank: 48,  active: '25K',   aircraft: '191',    naval: '12',   tier: 'LIMITED FORCE' },
+      co:  { rank: 49,  active: '295K',  aircraft: '501',    naval: '189',  tier: 'LIMITED FORCE' },
+      sg:  { rank: 50,  active: '72K',   aircraft: '277',    naval: '82',   tier: 'LIMITED FORCE' },
+      iq:  { rank: 51,  active: '194K',  aircraft: '271',    naval: '28',   tier: 'LIMITED FORCE' },
+      sy:  { rank: 52,  active: '169K',  aircraft: '339',    naval: '15',   tier: 'LIMITED FORCE' },
+      pe:  { rank: 53,  active: '90K',   aircraft: '256',    naval: '68',   tier: 'LIMITED FORCE' },
+      kz:  { rank: 54,  active: '74K',   aircraft: '266',    naval: '20',   tier: 'LIMITED FORCE' },
+      lk:  { rank: 55,  active: '256K',  aircraft: '56',     naval: '70',   tier: 'LIMITED FORCE' },
+      dk:  { rank: 56,  active: '17K',   aircraft: '109',    naval: '46',   tier: 'LIMITED FORCE' },
+      at:  { rank: 57,  active: '22K',   aircraft: '95',     naval: '0',    tier: 'LIMITED FORCE' },
+      ch:  { rank: 58,  active: '21K',   aircraft: '180',    naval: '0',    tier: 'LIMITED FORCE' },
+      et:  { rank: 59,  active: '162K',  aircraft: '82',     naval: '0',    tier: 'LIMITED FORCE' },
+      jo:  { rank: 60,  active: '101K',  aircraft: '244',    naval: '16',   tier: 'LIMITED FORCE' },
+      by:  { rank: 61,  active: '45K',   aircraft: '170',    naval: '0',    tier: 'LIMITED FORCE' },
+      ke:  { rank: 62,  active: '24K',   aircraft: '90',     naval: '6',    tier: 'LIMITED FORCE' },
+      ma:  { rank: 63,  active: '196K',  aircraft: '259',    naval: '121',  tier: 'LIMITED FORCE' },
+      tz:  { rank: 64,  active: '27K',   aircraft: '38',     naval: '4',    tier: 'LIMITED FORCE' },
+      kw:  { rank: 65,  active: '17K',   aircraft: '84',     naval: '10',   tier: 'LIMITED FORCE' },
+      qa:  { rank: 66,  active: '12K',   aircraft: '96',     naval: '23',   tier: 'LIMITED FORCE' },
+      om:  { rank: 67,  active: '43K',   aircraft: '148',    naval: '24',   tier: 'LIMITED FORCE' },
+      bg:  { rank: 68,  active: '37K',   aircraft: '98',     naval: '26',   tier: 'LIMITED FORCE' },
+      sk:  { rank: 69,  active: '17K',   aircraft: '81',     naval: '0',    tier: 'LIMITED FORCE' },
+      ge:  { rank: 70,  active: '37K',   aircraft: '50',     naval: '20',   tier: 'LIMITED FORCE' },
+      hr:  { rank: 71,  active: '16K',   aircraft: '47',     naval: '16',   tier: 'LIMITED FORCE' },
+      uz:  { rank: 72,  active: '66K',   aircraft: '170',    naval: '10',   tier: 'LIMITED FORCE' },
+      np:  { rank: 73,  active: '96K',   aircraft: '26',     naval: '0',    tier: 'LIMITED FORCE' },
+      ee:  { rank: 74,  active: '7K',    aircraft: '10',     naval: '3',    tier: 'LIMITED FORCE' },
+      lv:  { rank: 75,  active: '7K',    aircraft: '10',     naval: '9',    tier: 'LIMITED FORCE' },
+      lt:  { rank: 76,  active: '19K',   aircraft: '16',     naval: '12',   tier: 'LIMITED FORCE' },
+      sl:  { rank: 130, active: '9K',    aircraft: '11',     naval: '3',    tier: 'MINIMAL FORCE' },
+    };
+
+    // Nuclear states
+    const NUCLEAR_STATES = {
+      us:  'CONFIRMED NUCLEAR STATE — 5,550 warheads',
+      ru:  'CONFIRMED NUCLEAR STATE — 6,255 warheads',
+      cn:  'CONFIRMED NUCLEAR STATE — 500+ warheads',
+      gb:  'CONFIRMED NUCLEAR STATE — 225 warheads',
+      fr:  'CONFIRMED NUCLEAR STATE — 290 warheads',
+      in:  'CONFIRMED NUCLEAR STATE — 160 warheads',
+      pk:  'CONFIRMED NUCLEAR STATE — 165 warheads',
+      il:  'UNDECLARED NUCLEAR STATE — est. 90 warheads',
+      kp:  'CONFIRMED NUCLEAR STATE — est. 50+ warheads',
+    };
+
+    // Alliance membership
+    const ALLIANCES = {
+      // NATO
+      us: ['NATO','UN','G7','G20','FIVE EYES','QUAD'],
+      gb: ['NATO','UN','G7','G20','FIVE EYES','COMMONWEALTH'],
+      ca: ['NATO','UN','G7','G20','FIVE EYES','COMMONWEALTH'],
+      au: ['ANZUS','UN','G20','FIVE EYES','QUAD','COMMONWEALTH'],
+      nz: ['ANZUS','UN','FIVE EYES','COMMONWEALTH'],
+      fr: ['NATO','UN','G7','G20','EU'],
+      de: ['NATO','UN','G7','G20','EU'],
+      it: ['NATO','UN','G7','G20','EU'],
+      es: ['NATO','UN','EU'],
+      pl: ['NATO','UN','EU'],
+      nl: ['NATO','UN','EU'],
+      be: ['NATO','UN','EU'],
+      pt: ['NATO','UN','EU'],
+      no: ['NATO','UN'],
+      dk: ['NATO','UN','EU'],
+      gr: ['NATO','UN','EU'],
+      tr: ['NATO','UN','G20'],
+      cz: ['NATO','UN','EU'],
+      hu: ['NATO','UN','EU'],
+      ro: ['NATO','UN','EU'],
+      bg: ['NATO','UN','EU'],
+      hr: ['NATO','UN','EU'],
+      sk: ['NATO','UN','EU'],
+      si: ['NATO','UN','EU'],
+      ee: ['NATO','UN','EU'],
+      lv: ['NATO','UN','EU'],
+      lt: ['NATO','UN','EU'],
+      al: ['NATO','UN'],
+      me: ['NATO','UN'],
+      mk: ['NATO','UN'],
+      fi: ['NATO','UN','EU'],
+      se: ['NATO','UN','EU'],
+      // EU non-NATO
+      at: ['UN','EU'],
+      ie: ['UN','EU'],
+      ch: ['UN'],
+      // Russia bloc
+      ru: ['UN','G20','SCO','CSTO','BRICS'],
+      by: ['UN','CSTO'],
+      kz: ['UN','SCO','CSTO','G20'],
+      am: ['UN','CSTO'],
+      uz: ['UN','SCO'],
+      // China bloc
+      cn: ['UN','G20','SCO','BRICS'],
+      // BRICS
+      in: ['UN','G20','SCO','BRICS','QUAD'],
+      br: ['UN','G20','BRICS'],
+      za: ['UN','G20','BRICS','AU'],
+      eg: ['UN','AU','BRICS'],
+      ae: ['UN','G20'],
+      // ASEAN
+      id: ['UN','G20','ASEAN'],
+      my: ['UN','ASEAN','COMMONWEALTH'],
+      th: ['UN','ASEAN'],
+      ph: ['UN','ASEAN'],
+      vn: ['UN','ASEAN'],
+      sg: ['UN','ASEAN','COMMONWEALTH'],
+      mm: ['UN','ASEAN'],
+      kh: ['UN','ASEAN'],
+      la: ['UN','ASEAN'],
+      bn: ['UN','ASEAN','COMMONWEALTH'],
+      // Others
+      jp: ['UN','G7','G20','QUAD'],
+      kr: ['UN','G20'],
+      sa: ['UN','G20','OIC'],
+      il: ['UN'],
+      ir: ['UN','SCO'],
+      iq: ['UN','OIC'],
+      pk: ['UN','SCO','OIC','COMMONWEALTH'],
+      ng: ['UN','AU','COMMONWEALTH'],
+      ke: ['UN','AU','COMMONWEALTH'],
+      gh: ['UN','AU','COMMONWEALTH'],
+      tz: ['UN','AU','COMMONWEALTH'],
+      et: ['UN','AU'],
+      dz: ['UN','AU','OIC'],
+      ma: ['UN','AU'],
+      ly: ['UN','AU','OIC'],
+      sd: ['UN','AU','OIC'],
+      so: ['UN','AU','OIC'],
+      ye: ['UN','OIC'],
+      sy: ['UN','OIC'],
+      jo: ['UN','OIC'],
+      lb: ['UN','OIC'],
+      qa: ['UN','OIC'],
+      kw: ['UN','OIC'],
+      bh: ['UN','OIC'],
+      om: ['UN','OIC'],
+      tw: [],
+      kp: ['UN'],
+      ua: ['UN'],
+      ge: ['UN'],
+      az: ['UN'],
+      mx: ['UN','G20'],
+      ar: ['UN','G20'],
+      cl: ['UN'],
+      co: ['UN'],
+      pe: ['UN'],
+      np: ['UN'],
+      bd: ['UN','COMMONWEALTH'],
+      lk: ['UN','COMMONWEALTH'],
+      af: ['UN','OIC'],
+    };
+
+    // Alliance colour categories
+    const ALLIANCE_STYLES = {
+      'NATO':        'alliance-badge',
+      'EU':          'alliance-badge',
+      'UN':          'alliance-badge',
+      'FIVE EYES':   'alliance-badge',
+      'QUAD':        'alliance-badge',
+      'ANZUS':       'alliance-badge',
+      'COMMONWEALTH':'alliance-badge green-bloc',
+      'G7':          'alliance-badge amber-bloc',
+      'G20':         'alliance-badge amber-bloc',
+      'BRICS':       'alliance-badge amber-bloc',
+      'SCO':         'alliance-badge',
+      'CSTO':        'alliance-badge',
+      'ASEAN':       'alliance-badge green-bloc',
+      'AU':          'alliance-badge green-bloc',
+      'OIC':         'alliance-badge',
+    };
+
+    // Political leaders / gov types (selected major nations)
+    const POLITICAL_DATA = {
+      us: { gov: 'Federal Republic',    leader: 'Donald Trump' },
+      gb: { gov: 'Constitutional Monarchy', leader: 'Keir Starmer' },
+      fr: { gov: 'Semi-Presidential',   leader: 'Emmanuel Macron' },
+      de: { gov: 'Federal Republic',    leader: 'Friedrich Merz' },
+      ru: { gov: 'Presidential Republic', leader: 'Vladimir Putin' },
+      cn: { gov: "People's Republic",   leader: 'Xi Jinping' },
+      in: { gov: 'Federal Republic',    leader: 'Narendra Modi' },
+      jp: { gov: 'Constitutional Monarchy', leader: 'Fumio Kishida' },
+      kr: { gov: 'Republic',            leader: 'Yoon Suk-yeol' },
+      br: { gov: 'Federal Republic',    leader: 'Luiz Inácio Lula' },
+      ca: { gov: 'Federal Monarchy',    leader: 'Mark Carney' },
+      au: { gov: 'Federal Monarchy',    leader: 'Anthony Albanese' },
+      it: { gov: 'Parliamentary Republic', leader: 'Giorgia Meloni' },
+      es: { gov: 'Constitutional Monarchy', leader: 'Pedro Sánchez' },
+      tr: { gov: 'Presidential Republic', leader: 'Recep T. Erdoğan' },
+      sa: { gov: 'Absolute Monarchy',   leader: 'Mohammed bin Salman' },
+      il: { gov: 'Parliamentary Republic', leader: 'Benjamin Netanyahu' },
+      ir: { gov: 'Islamic Republic',    leader: 'Masoud Pezeshkian' },
+      pk: { gov: 'Federal Republic',    leader: 'Shehbaz Sharif' },
+      ua: { gov: 'Presidential Republic', leader: 'Volodymyr Zelensky' },
+      pl: { gov: 'Parliamentary Republic', leader: 'Donald Tusk' },
+      nl: { gov: 'Constitutional Monarchy', leader: 'Dick Schoof' },
+      se: { gov: 'Constitutional Monarchy', leader: 'Ulf Kristersson' },
+      no: { gov: 'Constitutional Monarchy', leader: 'Jonas Gahr Støre' },
+      fi: { gov: 'Republic',            leader: 'Alexander Stubb' },
+      kp: { gov: 'One-Party State',     leader: 'Kim Jong-un' },
+      eg: { gov: 'Presidential Republic', leader: 'Abdel Fattah el-Sisi' },
+      ng: { gov: 'Federal Republic',    leader: 'Bola Tinubu' },
+      za: { gov: 'Parliamentary Republic', leader: 'Cyril Ramaphosa' },
+      mx: { gov: 'Federal Republic',    leader: 'Claudia Sheinbaum' },
+      ar: { gov: 'Federal Republic',    leader: 'Javier Milei' },
+      id: { gov: 'Presidential Republic', leader: 'Prabowo Subianto' },
+      sg: ['UN','ASEAN','COMMONWEALTH'],
+      vn: { gov: 'One-Party Republic',  leader: 'Tô Lâm' },
+      th: { gov: 'Constitutional Monarchy', leader: 'Paetongtarn Shinawatra' },
+      mm: { gov: 'Military Junta',      leader: 'Min Aung Hlaing' },
+      by: { gov: 'Presidential Republic', leader: 'Alexander Lukashenko' },
+      ve: { gov: 'Presidential Republic', leader: 'Nicolás Maduro' },
+      sy: { gov: 'Transitional',        leader: 'Ahmad al-Sharaa' },
+      ly: { gov: 'Divided / Civil War', leader: 'GNU / HoR' },
+      af: { gov: 'Islamic Emirate',     leader: 'Hibatullah Akhundzada' },
+      ye: { gov: 'Civil War / Divided', leader: 'Multiple Factions' },
+      dz: { gov: 'Presidential Republic', leader: 'Abdelmadjid Tebboune' },
+    };
+
+    // ─── STABILITY SCORING ──────────────────────────────────────────────────────
+    // Computed from: GDP per capita, defence % GDP, region risk, nuclear status,
+    // active conflict flag, governance type
+    const CONFLICT_ZONES = ['ua','ru','sy','ye','af','ly','iq','ml','so','sd','mm','et','cd','ng'];
+    const HIGH_INSTABILITY = ['kp','ve','by','ir','af','ye','sy','ly','sd','so','zw','mm'];
+    const AUTHORITARIAN = ['cn','ru','kp','sa','ae','by','ir','az','uz','kz','mm','tz'];
+
+    function computeStability(iso, gdpPerCapita) {
+      let score = 50; // baseline
+
+      // GDP per capita signal (0-30 points)
+      if (gdpPerCapita > 50000) score += 30;
+      else if (gdpPerCapita > 25000) score += 22;
+      else if (gdpPerCapita > 10000) score += 14;
+      else if (gdpPerCapita > 3000) score += 6;
+      else score -= 8;
+
+      // Conflict penalty
+      if (CONFLICT_ZONES.includes(iso)) score -= 30;
+      // High instability
+      if (HIGH_INSTABILITY.includes(iso)) score -= 15;
+      // Authoritarian governance signal
+      if (AUTHORITARIAN.includes(iso)) score -= 8;
+      // Nuclear deterrent (marginal stability signal for established states)
+      if (['us','gb','fr','cn','in'].includes(iso)) score += 5;
+
+      return Math.max(2, Math.min(98, Math.round(score)));
+    }
+
+    function stabilityColour(score) {
+      if (score >= 75) return '#00ff88';
+      if (score >= 55) return '#aaff44';
+      if (score >= 40) return '#ffaa00';
+      if (score >= 25) return '#ff6600';
+      return '#ff3333';
+    }
+
+    function stabilityLabel(score) {
+      if (score >= 75) return 'STABLE';
+      if (score >= 55) return 'MODERATE';
+      if (score >= 40) return 'ELEVATED';
+      if (score >= 25) return 'HIGH RISK';
+      return 'CRITICAL';
+    }
+
+    // Cache for heatmap colouring
+    const stabilityCache = {};
+
+    // ─── FORMAT HELPERS ─────────────────────────────────────────────────────────
+    function fmtGDP(usd) {
+      if (!usd) return 'N/A';
+      if (usd >= 1e12) return '$' + (usd / 1e12).toFixed(2) + 'T';
+      if (usd >= 1e9)  return '$' + (usd / 1e9).toFixed(1) + 'B';
+      return '$' + (usd / 1e6).toFixed(0) + 'M';
+    }
+
+    function fmtPop(p) {
+      if (p > 1e9) return (p/1e9).toFixed(2) + 'B';
+      if (p > 1e6) return (p/1e6).toFixed(1) + 'M';
+      return (p/1e3).toFixed(0) + 'K';
+    }
+
+    // ─── MAP INIT ───────────────────────────────────────────────────────────────
     const map = L.map('map', {
       center: [20, 0],
       zoom: 2,
@@ -592,6 +1014,7 @@
       subdomains: 'abcd'
     }).addTo(map);
 
+    // ─── PANEL OPEN/CLOSE ────────────────────────────────────────────────────────
     function openPanel() {
       document.getElementById('country-panel').classList.add('open');
       document.getElementById('map').classList.add('panel-open');
@@ -602,89 +1025,235 @@
       document.getElementById('map').classList.remove('panel-open');
     }
 
+    // ─── COUNTRY CLICK HANDLER ──────────────────────────────────────────────────
     function onCountryClick(feature) {
       const name = feature.properties.name;
       const manualFix = { 'France': 'fr', 'Norway': 'no', 'Kosovo': 'xk' };
-const rawIso = manualFix[feature.properties.name] || feature.properties['ISO3166-1-Alpha-2'];
-      const iso = (rawIso && rawIso !== '-99') ? rawIso.toLowerCase() : (feature.properties['ISO3166-1-Alpha-3'] ? feature.properties['ISO3166-1-Alpha-3'].toLowerCase() : null);
+      const rawIso = manualFix[name] || feature.properties['ISO3166-1-Alpha-2'];
+      const iso = (rawIso && rawIso !== '-99') ? rawIso.toLowerCase() : null;
 
-      if (!iso) {
-        console.warn('No ISO code for:', name);
-        return;
-      }
+      if (!iso) { console.warn('No ISO code for:', name); return; }
 
+      // Reset panel
       document.getElementById('panel-flag').src = `https://flagcdn.com/w160/${iso}.png`;
       document.getElementById('panel-name').textContent = name.toUpperCase();
       document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // FETCHING DATA...`;
       document.getElementById('stability-bar').style.width = '0%';
       document.getElementById('stability-val').textContent = '—';
-      document.getElementById('stat-pop').textContent = '—';
-      document.getElementById('stat-gdp').textContent = '—';
-      document.getElementById('stat-def').textContent = '—';
-      document.getElementById('stat-defpct').textContent = '—';
-      document.getElementById('mil-rank').textContent = '—';
-      document.getElementById('mil-sub').textContent = 'FETCHING DATA...';
-      document.getElementById('mil-active').textContent = '—';
-      document.getElementById('mil-aircraft').textContent = '—';
-      document.getElementById('mil-naval').textContent = '—';
+      ['stat-pop','stat-gdp','stat-def','stat-defpct','mil-rank','mil-active','mil-aircraft','mil-naval'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+      document.getElementById('mil-sub').textContent = 'FETCHING...';
       document.getElementById('nuclear-warning').style.display = 'none';
-      document.getElementById('alliance-row').innerHTML = '—';
+      document.getElementById('alliance-row').innerHTML = '<span style="color:#2a4a38;font-family:Share Tech Mono,monospace;font-size:9px;">LOADING...</span>';
       document.getElementById('pol-gov').textContent = '—';
       document.getElementById('pol-party').textContent = '—';
       document.getElementById('news-container').innerHTML = '<div class="loading">// FETCHING INTELLIGENCE...</div>';
 
       openPanel();
 
+      // ── Military data (static) ──
+      const mil = MILITARY_DATA[iso];
+      if (mil) {
+        document.getElementById('mil-rank').textContent = '#' + mil.rank;
+        document.getElementById('mil-sub').textContent = mil.tier;
+        document.getElementById('mil-active').textContent = mil.active;
+        document.getElementById('mil-aircraft').textContent = mil.aircraft;
+        document.getElementById('mil-naval').textContent = mil.naval;
+      } else {
+        document.getElementById('mil-rank').textContent = 'N/A';
+        document.getElementById('mil-sub').textContent = 'DATA UNAVAILABLE';
+        document.getElementById('mil-active').textContent = '—';
+        document.getElementById('mil-aircraft').textContent = '—';
+        document.getElementById('mil-naval').textContent = '—';
+      }
+
+      // ── Nuclear ──
+      if (NUCLEAR_STATES[iso]) {
+        document.getElementById('nuclear-warning').style.display = 'flex';
+        document.getElementById('nuclear-text').textContent = NUCLEAR_STATES[iso];
+      }
+
+      // ── Alliances ──
+      const alliances = ALLIANCES[iso] || ['UN'];
+      document.getElementById('alliance-row').innerHTML =
+        alliances.length
+          ? alliances.map(a => `<span class="${ALLIANCE_STYLES[a] || 'alliance-badge'}">${a}</span>`).join('')
+          : '<span style="color:#2a4a38;font-family:Share Tech Mono,monospace;font-size:9px;">UNALIGNED</span>';
+
+      // ── Defence (static) ──
+      const def = DEFENCE_DATA[iso];
+      if (def) {
+        document.getElementById('stat-def').textContent = '$' + def.budget + 'B';
+        document.getElementById('stat-defpct').textContent = def.pct.toFixed(1) + '%';
+      }
+
+      // ── Political (static) ──
+      const pol = POLITICAL_DATA[iso];
+      if (pol && pol.gov) {
+        document.getElementById('pol-gov').textContent = pol.gov;
+        document.getElementById('pol-party').textContent = pol.leader;
+      }
+
+      // ── REST Countries API → then World Bank GDP ──
       fetch(`https://restcountries.com/v3.1/alpha/${iso}`)
         .then(res => res.json())
         .then(data => {
           const country = data[0];
-
           const pop = country.population;
-          document.getElementById('stat-pop').textContent =
-            pop > 1000000 ? (pop/1000000).toFixed(1) + 'M' : (pop/1000).toFixed(0) + 'K';
-
+          document.getElementById('stat-pop').textContent = fmtPop(pop);
           document.getElementById('panel-sub').textContent =
-            `${iso.toUpperCase()} // ${country.region.toUpperCase()}${country.subregion ? ' // ' + country.subregion.toUpperCase() : ''}`;
+            `${iso.toUpperCase()} // ${country.region.toUpperCase()}${country.subregion ? ' · ' + country.subregion.toUpperCase() : ''}`;
 
-          document.getElementById('pol-gov').textContent = 'See Wikipedia';
+          // World Bank GDP
+          const wbCode = iso.toUpperCase();
+          return fetch(`https://api.worldbank.org/v2/country/${wbCode}/indicator/NY.GDP.MKTP.CD?format=json&mrv=1`)
+            .then(r => r.json())
+            .then(wbData => {
+              let gdp = null;
+              if (wbData[1] && wbData[1][0] && wbData[1][0].value) {
+                gdp = wbData[1][0].value;
+              }
+              document.getElementById('stat-gdp').textContent = gdp ? fmtGDP(gdp) : 'N/A';
 
-          const natoMembers = ['us','gb','fr','de','it','es','pl','nl','be','pt','no','dk','is','ca','tr','gr','cz','hu','ro','bg','hr','sk','si','ee','lv','lt','al','me','mk','ba','fi','se'];
-          const alliances = ['UN MEMBER'];
-          if (natoMembers.includes(iso)) alliances.push('NATO');
+              // Stability score
+              const gdpPerCap = gdp && pop ? gdp / pop : 0;
+              const score = computeStability(iso, gdpPerCap);
+              stabilityCache[iso] = score;
+              const col = stabilityColour(score);
+              const bar = document.getElementById('stability-bar');
+              bar.style.width = score + '%';
+              bar.style.background = col;
+              bar.style.boxShadow = `0 0 8px ${col}`;
+              const valEl = document.getElementById('stability-val');
+              valEl.textContent = score;
+              valEl.style.color = col;
 
-          document.getElementById('alliance-row').innerHTML =
-            alliances.map(a => `<span class="alliance-badge">${a}</span>`).join('');
-
-          document.getElementById('news-container').innerHTML =
-            '<div class="loading">// NEWS API COMING IN PHASE 4</div>';
+              // Update heatmap for this country
+              updateCountryHeatmap(iso, score);
+            });
         })
-        .catch(() => {
-          document.getElementById('panel-sub').textContent = 'DATA UNAVAILABLE';
+        .catch(err => {
+          console.warn('Data fetch error:', err);
+          document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // DATA PARTIAL`;
+          // Still compute stability from what we have
+          const score = computeStability(iso, 0);
+          const col = stabilityColour(score);
+          const bar = document.getElementById('stability-bar');
+          bar.style.width = score + '%';
+          bar.style.background = col;
+          bar.style.boxShadow = `0 0 8px ${col}`;
+          document.getElementById('stability-val').textContent = score;
+          document.getElementById('stability-val').style.color = col;
         });
+
+      // ── News placeholder (Phase 4) ──
+      document.getElementById('news-container').innerHTML = `
+        <div style="padding:12px 0;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#2a4a38;letter-spacing:2px;margin-bottom:8px;">// LIVE FEEDS WIRING IN PHASE 4</div>
+          <div class="news-item">
+            <span class="news-tag pol">POL</span>
+            <div><div class="news-text">Political intelligence feed pending NewsAPI integration.</div><span class="news-time">PHASE 4 PENDING</span></div>
+          </div>
+          <div class="news-item">
+            <span class="news-tag eco">ECO</span>
+            <div><div class="news-text">Economic data streams will auto-populate on Phase 4 deployment.</div><span class="news-time">PHASE 4 PENDING</span></div>
+          </div>
+          <div class="news-item">
+            <span class="news-tag def">DEF</span>
+            <div><div class="news-text">Defence & conflict monitoring feeds require NewsAPI key.</div><span class="news-time">PHASE 4 PENDING</span></div>
+          </div>
+        </div>`;
+    }
+
+    // ─── GEOJSON + HEATMAP ──────────────────────────────────────────────────────
+    let geoLayer;
+    const layerByIso = {};
+
+    // Pre-compute stable stability scores for major nations (no API needed)
+    const PRECOMPUTED = {
+      us:97,gb:92,fr:88,de:90,jp:91,au:93,ca:94,nz:91,se:91,no:93,fi:90,dk:92,
+      ch:95,at:91,nl:90,be:88,ie:89,sg:94,kr:82,tw:78,
+      ru:38,cn:62,in:60,br:58,za:52,mx:50,tr:54,ar:44,
+      ua:20,sy:8,af:5,ye:8,ly:10,kp:12,ve:22,mm:18,by:28,ir:28,iq:30,
+      pk:40,eg:38,ng:35,et:30,so:6,sd:14,cd:12,ml:18,
+      il:52,sa:55,ae:68,qa:70,kw:72,bh:65,om:62,jo:55,lb:24,
+      id:60,my:65,th:62,vn:58,ph:55,kh:50,bd:52,lk:50,np:48,
+      de:90,pl:78,ro:62,bg:60,cz:82,sk:78,hu:68,hr:72,si:82,
+      ee:84,lv:80,lt:80,al:58,rs:60,ge:52,az:50,kz:55,uz:48,
+      cl:75,co:54,pe:55,uy:78,bo:48,py:50,ec:48,
+      ma:58,dz:45,tn:52,ke:54,gh:62,tz:55,cm:40,ao:42,
+    };
+
+    function getFillColour(iso) {
+      const score = stabilityCache[iso] || PRECOMPUTED[iso] || null;
+      if (score === null) return { color: '#0a2a1a', opacity: 0.25 };
+      const c = stabilityColour(score);
+      return { color: c, opacity: 0.28 };
+    }
+
+    function updateCountryHeatmap(iso, score) {
+      stabilityCache[iso] = score;
+      if (layerByIso[iso]) {
+        const { color } = getFillColour(iso);
+        layerByIso[iso].setStyle({ fillColor: color, fillOpacity: 0.35 });
+      }
     }
 
     fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
       .then(res => res.json())
       .then(data => {
-        L.geoJSON(data, {
-          style: {
-            color: '#00ff88',
-            weight: 0.5,
-            fillColor: '#0a2a1a',
-            fillOpacity: 0.3
+        geoLayer = L.geoJSON(data, {
+          style: feature => {
+            const manualFix = { 'France': 'fr', 'Norway': 'no', 'Kosovo': 'xk' };
+            const raw = manualFix[feature.properties.name] || feature.properties['ISO3166-1-Alpha-2'];
+            const iso = raw && raw !== '-99' ? raw.toLowerCase() : null;
+            const { color, opacity } = iso ? getFillColour(iso) : { color: '#0a2a1a', opacity: 0.2 };
+            return {
+              color: '#00ff88',
+              weight: 0.5,
+              fillColor: color,
+              fillOpacity: opacity
+            };
           },
-          onEachFeature: function(feature, layer) {
+          onEachFeature: (feature, layer) => {
+            // Cache layer by ISO
+            const manualFix = { 'France': 'fr', 'Norway': 'no', 'Kosovo': 'xk' };
+            const raw = manualFix[feature.properties.name] || feature.properties['ISO3166-1-Alpha-2'];
+            const iso = raw && raw !== '-99' ? raw.toLowerCase() : null;
+            if (iso) layerByIso[iso] = layer;
+
+            // Tooltip
+            layer.bindTooltip(() => {
+              const score = iso ? (stabilityCache[iso] || PRECOMPUTED[iso] || null) : null;
+              const scoreColour = score ? stabilityColour(score) : '#5a8070';
+              const precompPop = feature.properties.pop_est;
+              const flagUrl = iso ? `https://flagcdn.com/w40/${iso}.png` : '';
+              return `<div class="meridian-tooltip">
+                ${flagUrl ? `<img class="tt-flag" src="${flagUrl}" onerror="this.style.display='none'">` : ''}
+                <div class="tt-name">${feature.properties.name.toUpperCase()}</div>
+                ${precompPop ? `<div class="tt-row">POP <span>${fmtPop(precompPop)}</span></div>` : ''}
+                ${score !== null ? `
+                <div class="tt-stability">
+                  <div class="tt-bar-bg" style="flex:1;height:3px;background:#0d2a1a;">
+                    <div class="tt-bar-fill" style="width:${score}%;height:100%;background:${scoreColour};"></div>
+                  </div>
+                  <span class="tt-score" style="color:${scoreColour};font-size:9px;font-family:'Share Tech Mono',monospace;margin-left:5px;">${score} · ${stabilityLabel(score)}</span>
+                </div>` : ''}
+              </div>`;
+            }, {
+              className: 'meridian-tooltip',
+              sticky: true,
+              offset: [12, 0]
+            });
+
             layer.on({
-              mouseover: function(e) {
-                e.target.setStyle({ fillOpacity: 0.6, fillColor: '#00ff88' });
+              mouseover: e => e.target.setStyle({ fillOpacity: 0.65, weight: 1.2, color: '#00ff88' }),
+              mouseout:  e => {
+                const { color, opacity } = iso ? getFillColour(iso) : { color: '#0a2a1a', opacity: 0.2 };
+                e.target.setStyle({ fillColor: color, fillOpacity: opacity, weight: 0.5, color: '#00ff88' });
               },
-              mouseout: function(e) {
-                e.target.setStyle({ fillOpacity: 0.3, fillColor: '#0a2a1a' });
-              },
-              click: function(e) {
-                onCountryClick(feature);
-              }
+              click: () => onCountryClick(feature)
             });
           }
         }).addTo(map);
