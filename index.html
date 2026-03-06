@@ -409,8 +409,8 @@
         <div class="stat-grid">
           <div class="stat-card"><div class="stat-label">Population</div><div class="stat-value" id="stat-pop">—</div></div>
           <div class="stat-card"><div class="stat-label">GDP</div><div class="stat-value green" id="stat-gdp">—</div></div>
-          <div class="stat-card"><div class="stat-label">Def. Budget</div><div class="stat-value amber" id="stat-def">—</div></div>
-          <div class="stat-card"><div class="stat-label">GDP % Def.</div><div class="stat-value amber" id="stat-defpct">—</div></div>
+          <div class="stat-card"><div class="stat-label">Def. Budget</div><div class="stat-value green" id="stat-def">—</div></div>
+          <div class="stat-card"><div class="stat-label">GDP % Def.</div><div class="stat-value green" id="stat-defpct">—</div></div>
         </div>
       </div>
       <div class="panel-section">
@@ -462,8 +462,8 @@
       <div class="panel-section">
         <div class="section-title">Defence Budget</div>
         <div class="stat-grid">
-          <div class="stat-card"><div class="stat-label">Annual Budget</div><div class="stat-value amber" id="mil-budget">—</div></div>
-          <div class="stat-card"><div class="stat-label">% of GDP</div><div class="stat-value amber" id="mil-gdppct">—</div></div>
+          <div class="stat-card"><div class="stat-label">Annual Budget</div><div class="stat-value green" id="mil-budget">—</div></div>
+          <div class="stat-card"><div class="stat-label">% of GDP</div><div class="stat-value green" id="mil-gdppct">—</div></div>
         </div>
       </div>
       <div class="panel-section">
@@ -1139,14 +1139,13 @@
     let currentMode = 'tactical';
 
     const TACTICAL_BG   = '#020810';
-    const TACTICAL_TILE = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-    const TERRAIN_TILE  = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}';
+    const TERRAIN_IMG   = 'https://unpkg.com/three-globe/example/img/earth-day.jpg';
 
     function getPolygonColour(iso) {
       const score = getStabilityScore(iso);
-      if (score === null) return 'rgba(10,42,26,0.6)';
+      if (score === null) return 'rgba(10,42,26,0.5)';
       const c = stabilityColour(score);
-      return hexToRgba(c, 0.55);
+      return hexToRgba(c, 0.5);
     }
 
     function hexToRgba(hex, alpha) {
@@ -1158,9 +1157,41 @@
 
     function getPolygonStroke(iso) {
       const score = getStabilityScore(iso);
-      if (score === null) return 'rgba(0,255,136,0.3)';
-      return hexToRgba(stabilityColour(score), 0.8);
+      if (score === null) return '#00ff88';
+      return stabilityColour(score);
     }
+
+    // Country label positions for major nations
+    const COUNTRY_LABELS = [
+      {name:'USA',lat:39,lng:-98,size:0.6},{name:'CANADA',lat:60,lng:-96,size:0.55},
+      {name:'MEXICO',lat:23,lng:-102,size:0.45},{name:'BRAZIL',lat:-10,lng:-53,size:0.6},
+      {name:'ARGENTINA',lat:-35,lng:-65,size:0.45},{name:'COLOMBIA',lat:4,lng:-74,size:0.4},
+      {name:'PERU',lat:-9,lng:-75,size:0.4},{name:'CHILE',lat:-35,lng:-71,size:0.4},
+      {name:'UK',lat:54,lng:-2,size:0.4},{name:'FRANCE',lat:46,lng:2,size:0.45},
+      {name:'GERMANY',lat:51,lng:10,size:0.45},{name:'SPAIN',lat:40,lng:-3,size:0.4},
+      {name:'ITALY',lat:42,lng:12,size:0.4},{name:'POLAND',lat:52,lng:20,size:0.4},
+      {name:'UKRAINE',lat:49,lng:32,size:0.45},{name:'RUSSIA',lat:62,lng:90,size:0.7},
+      {name:'TURKEY',lat:39,lng:35,size:0.45},{name:'SWEDEN',lat:63,lng:16,size:0.4},
+      {name:'NORWAY',lat:65,lng:14,size:0.4},{name:'FINLAND',lat:64,lng:26,size:0.4},
+      {name:'CHINA',lat:36,lng:105,size:0.65},{name:'INDIA',lat:21,lng:79,size:0.6},
+      {name:'JAPAN',lat:37,lng:138,size:0.45},{name:'S. KOREA',lat:37,lng:128,size:0.38},
+      {name:'AUSTRALIA',lat:-26,lng:134,size:0.65},{name:'INDONESIA',lat:-3,lng:118,size:0.5},
+      {name:'PAKISTAN',lat:30,lng:70,size:0.45},{name:'IRAN',lat:33,lng:54,size:0.45},
+      {name:'IRAQ',lat:33,lng:44,size:0.38},{name:'SAUDI ARABIA',lat:24,lng:45,size:0.5},
+      {name:'EGYPT',lat:27,lng:30,size:0.45},{name:'S. AFRICA',lat:-29,lng:25,size:0.45},
+      {name:'NIGERIA',lat:9,lng:8,size:0.45},{name:'ETHIOPIA',lat:9,lng:40,size:0.4},
+      {name:'KENYA',lat:0,lng:38,size:0.38},{name:'ALGERIA',lat:28,lng:3,size:0.45},
+      {name:'MOROCCO',lat:32,lng:-6,size:0.38},{name:'ISRAEL',lat:31,lng:35,size:0.32},
+      {name:'UKRAINE',lat:49,lng:32,size:0.45},{name:'KAZAKHSTAN',lat:49,lng:68,size:0.5},
+      {name:'THAILAND',lat:15,lng:101,size:0.4},{name:'VIETNAM',lat:16,lng:108,size:0.38},
+      {name:'MALAYSIA',lat:4,lng:110,size:0.38},{name:'PHILIPPINES',lat:13,lng:122,size:0.38},
+      {name:'NEW ZEALAND',lat:-42,lng:172,size:0.38},{name:'TAIWAN',lat:24,lng:121,size:0.32},
+      {name:'N. KOREA',lat:40,lng:127,size:0.35},{name:'MYANMAR',lat:19,lng:96,size:0.38},
+      {name:'VENEZUELA',lat:8,lng:-66,size:0.4},{name:'AFGHANISTAN',lat:34,lng:66,size:0.4},
+      {name:'SYRIA',lat:35,lng:38,size:0.35},{name:'LIBYA',lat:27,lng:17,size:0.4},
+      {name:'SUDAN',lat:16,lng:31,size:0.4},{name:'ANGOLA',lat:-12,lng:18,size:0.4},
+      {name:'MOZAMBIQUE',lat:-18,lng:35,size:0.38},{name:'TANZANIA',lat:-7,lng:35,size:0.38},
+    ];
 
     const globe = Globe()(document.getElementById('globe-container'))
       .width(window.innerWidth)
@@ -1169,11 +1200,21 @@
       .showAtmosphere(true)
       .atmosphereColor('#00ff88')
       .atmosphereAltitude(0.15)
-      .globeImageUrl('') // start with no texture — dark tactical look
+      .globeImageUrl('')
       .polygonCapColor(d => getPolygonColour(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''))
-      .polygonSideColor(() => 'rgba(0,255,136,0.05)')
+      .polygonSideColor(() => 'rgba(0,255,136,0.04)')
       .polygonStrokeColor(d => getPolygonStroke(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''))
-      .polygonAltitude(0.005)
+      .polygonAltitude(0.003)
+      .polygonsTransitionDuration(200)
+      .labelsData(COUNTRY_LABELS)
+      .labelLat(d => d.lat)
+      .labelLng(d => d.lng)
+      .labelText(d => d.name)
+      .labelSize(d => d.size)
+      .labelDotRadius(0)
+      .labelColor(() => 'rgba(180,210,195,0.7)')
+      .labelResolution(2)
+      .labelAltitude(0.015)
       .polygonLabel(d => {
         const iso = d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : null;
         const name = d.properties.ADMIN || d.properties.name || '';
@@ -1192,10 +1233,9 @@
       })
       .onPolygonClick(d => onCountryClick(d))
       .onPolygonHover(d => {
-        globe.polygonAltitude(feat => feat === d ? 0.02 : 0.005);
+        globe.polygonAltitude(feat => feat === d ? 0.015 : 0.003);
         document.getElementById('globe-container').style.cursor = d ? 'pointer' : 'default';
-      })
-      .polygonsTransitionDuration(200);
+      });
 
     // Set initial globe appearance — dark tactical with no texture, space background
     globe.scene().background = null;
@@ -1226,18 +1266,20 @@
         globe.globeImageUrl('');
         globe.backgroundColor(TACTICAL_BG);
         globe.atmosphereColor('#00ff88');
+        globe.atmosphereAltitude(0.15);
         globe.polygonCapColor(d => getPolygonColour(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
         globe.polygonStrokeColor(d => getPolygonStroke(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
+        globe.labelsData(COUNTRY_LABELS);
         document.getElementById('btn-tactical').classList.add('active');
         document.getElementById('btn-terrain').classList.remove('active');
       } else {
-        globe.globeImageUrl(TERRAIN_TILE.replace('{z}','2').replace('{y}','1').replace('{x}','2'));
-        // Use the proper Esri Physical texture for globe
-        globe.globeImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png');
-        globe.backgroundColor('#000510');
-        globe.atmosphereColor('#4488ff');
+        globe.globeImageUrl(TERRAIN_IMG);
+        globe.backgroundColor('#000816');
+        globe.atmosphereColor('#88aaff');
+        globe.atmosphereAltitude(0.2);
         globe.polygonCapColor(() => 'rgba(0,0,0,0)');
-        globe.polygonStrokeColor(() => 'rgba(0,255,136,0.5)');
+        globe.polygonStrokeColor(() => 'rgba(0,255,136,0.6)');
+        globe.labelsData([]);
         document.getElementById('btn-terrain').classList.add('active');
         document.getElementById('btn-tactical').classList.remove('active');
       }
@@ -1246,7 +1288,6 @@
     // ─── GLOBE POLYGON UPDATE AFTER DATA LOAD ────────────────────────────────────
     function updateGlobePolygon(iso, score) {
       stabilityCache[iso] = score;
-      // Re-apply colours to all polygons
       globe.polygonCapColor(d => getPolygonColour(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
       globe.polygonStrokeColor(d => getPolygonStroke(d.properties.ISO_A2 ? d.properties.ISO_A2.toLowerCase() : ''));
     }
