@@ -458,6 +458,47 @@
       animation: pulse 1.5s ease-in-out infinite;
     }
 
+    /* Map Mode Toggle */
+    #map-toggle {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      pointer-events: all;
+    }
+
+    .toggle-btn {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      padding: 5px 11px;
+      border: 1px solid #0d2a1a;
+      background: #020a0f;
+      color: #2a4a38;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .toggle-btn:first-child {
+      border-right: none;
+    }
+
+    .toggle-btn.active {
+      background: #091a14;
+      color: #00ff88;
+      border-color: #00ff8860;
+      text-shadow: 0 0 8px #00ff88;
+    }
+
+    .toggle-btn:hover:not(.active) {
+      color: #5a8070;
+      border-color: #1a4a2a;
+    }
+
     /* Tooltip */
     .meridian-tooltip {
       background: #060e16 !important;
@@ -487,6 +528,11 @@
       <span id="clock">00:00:00 UTC</span>
       <span>CLASSIFICATION: OPEN SOURCE</span>
     </div>
+  </div>
+
+  <div id="map-toggle">
+    <div class="toggle-btn active" id="btn-tactical" onclick="setMapMode('tactical')">⬛ TACTICAL</div>
+    <div class="toggle-btn" id="btn-terrain" onclick="setMapMode('terrain')">🌍 TERRAIN</div>
   </div>
 
   <div id="map"></div>
@@ -1009,10 +1055,49 @@
       zoomControl: true
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    const TILE_TACTICAL = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '© CartoDB',
       subdomains: 'abcd'
-    }).addTo(map);
+    });
+
+    const TILE_TERRAIN = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '© Esri'
+    });
+
+    TILE_TACTICAL.addTo(map);
+    let currentMode = 'tactical';
+
+    function setMapMode(mode) {
+      if (mode === currentMode) return;
+      currentMode = mode;
+      if (mode === 'tactical') {
+        map.removeLayer(TILE_TERRAIN);
+        TILE_TACTICAL.addTo(map);
+        // Restore dark border style
+        if (geoLayer) geoLayer.setStyle(feature => {
+          const manualFix = { 'France': 'fr', 'Norway': 'no', 'Kosovo': 'xk' };
+          const raw = manualFix[feature.properties.name] || feature.properties['ISO3166-1-Alpha-2'];
+          const iso = raw && raw !== '-99' ? raw.toLowerCase() : null;
+          const { color, opacity } = iso ? getFillColour(iso) : { color: '#0a2a1a', opacity: 0.2 };
+          return { color: '#00ff88', weight: 0.5, fillColor: color, fillOpacity: opacity };
+        });
+        document.getElementById('btn-tactical').classList.add('active');
+        document.getElementById('btn-terrain').classList.remove('active');
+      } else {
+        map.removeLayer(TILE_TACTICAL);
+        TILE_TERRAIN.addTo(map);
+        // Lighter borders so terrain map shows through clearly
+        if (geoLayer) geoLayer.setStyle(feature => {
+          const manualFix = { 'France': 'fr', 'Norway': 'no', 'Kosovo': 'xk' };
+          const raw = manualFix[feature.properties.name] || feature.properties['ISO3166-1-Alpha-2'];
+          const iso = raw && raw !== '-99' ? raw.toLowerCase() : null;
+          const { color, opacity } = iso ? getFillColour(iso) : { color: '#0a2a1a', opacity: 0.0 };
+          return { color: '#00ff8888', weight: 0.8, fillColor: color, fillOpacity: opacity * 0.5 };
+        });
+        document.getElementById('btn-terrain').classList.add('active');
+        document.getElementById('btn-tactical').classList.remove('active');
+      }
+    }
 
     // ─── PANEL OPEN/CLOSE ────────────────────────────────────────────────────────
     function openPanel() {
