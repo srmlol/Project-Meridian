@@ -499,6 +499,124 @@
       border-color: #1a4a2a;
     }
 
+    /* ── Tab System ── */
+    .panel-tabs {
+      display: flex;
+      border-bottom: 1px solid #0d2a1a;
+      background: #060e16;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .panel-tab {
+      flex: 1;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: #2a4a38;
+      text-align: center;
+      padding: 10px 4px;
+      cursor: pointer;
+      border-right: 1px solid #0d2a1a;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .panel-tab:last-child { border-right: none; }
+
+    .panel-tab:hover:not(.active) {
+      color: #5a8070;
+      background: #091422;
+    }
+
+    .panel-tab.active {
+      color: #00ff88;
+      background: #091a14;
+      border-bottom: 2px solid #00ff88;
+      text-shadow: 0 0 8px #00ff88;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Political extras */
+    .risk-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border: 1px solid;
+      margin-top: 2px;
+    }
+
+    .risk-flag.stable   { color: #00ff88; border-color: #00ff8840; background: #051209; }
+    .risk-flag.moderate { color: #ffaa00; border-color: #ffaa0040; background: #1a1200; }
+    .risk-flag.high     { color: #ff6600; border-color: #ff660040; background: #1a0800; }
+    .risk-flag.critical { color: #ff3333; border-color: #ff333340; background: #1a0505; }
+
+    .democracy-bar-bg {
+      flex: 1;
+      height: 4px;
+      background: #0d2a1a;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .democracy-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.8s ease;
+    }
+
+    .election-card {
+      background: #091422;
+      border: 1px solid #0d2a1a;
+      padding: 10px 12px;
+      margin-top: 6px;
+    }
+
+    .election-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: #2a4a38;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+    }
+
+    .election-value {
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: #c8dfd0;
+    }
+
+    .election-value.soon { color: #ffaa00; text-shadow: 0 0 8px rgba(255,170,0,0.3); }
+    .election-value.overdue { color: #ff3333; }
+
+    /* Economic placeholder */
+    .placeholder-section {
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    .placeholder-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      opacity: 0.3;
+    }
+
+    .placeholder-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      color: #2a4a38;
+      letter-spacing: 2px;
+      line-height: 1.8;
+    }
+
     /* Tooltip */
     .meridian-tooltip {
       background: #060e16 !important;
@@ -558,82 +676,163 @@
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="section-title">Key Data</div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-label">Population</div>
-          <div class="stat-value" id="stat-pop">—</div>
+    <!-- TAB BAR -->
+    <div class="panel-tabs">
+      <div class="panel-tab active" id="tab-overview"    onclick="switchTab('overview')">OVERVIEW</div>
+      <div class="panel-tab"        id="tab-military"   onclick="switchTab('military')">MILITARY</div>
+      <div class="panel-tab"        id="tab-intel"      onclick="switchTab('intel')">INTEL</div>
+      <div class="panel-tab"        id="tab-economic"   onclick="switchTab('economic')">ECONOMIC</div>
+    </div>
+
+    <!-- TAB 1: OVERVIEW -->
+    <div class="tab-content active" id="content-overview">
+
+      <div class="panel-section">
+        <div class="section-title">Key Data</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Population</div>
+            <div class="stat-value" id="stat-pop">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">GDP</div>
+            <div class="stat-value green" id="stat-gdp">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Def. Budget</div>
+            <div class="stat-value amber" id="stat-def">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">GDP % Def.</div>
+            <div class="stat-value amber" id="stat-defpct">—</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">GDP</div>
-          <div class="stat-value green" id="stat-gdp">—</div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Alliances & Blocs</div>
+        <div class="alliance-row" id="alliance-row">—</div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Political</div>
+        <div class="stat-grid" style="margin-bottom:8px;">
+          <div class="stat-card">
+            <div class="stat-label">Government</div>
+            <div class="stat-value" id="pol-gov" style="font-size:10px;font-family:'Rajdhani'">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Head of State</div>
+            <div class="stat-value" id="pol-party" style="font-size:10px;font-family:'Rajdhani';color:#00aaff;">—</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Def. Budget</div>
-          <div class="stat-value amber" id="stat-def">—</div>
+        <!-- Democracy index row -->
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#2a4a38;letter-spacing:2px;">DEMOCRACY INDEX</span>
+            <span id="pol-demo-label" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#5a8070;">—</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="democracy-bar-bg">
+              <div class="democracy-bar-fill" id="pol-demo-bar" style="width:0%"></div>
+            </div>
+            <span id="pol-demo-score" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#5a8070;width:28px;text-align:right;">—</span>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">GDP % Def.</div>
-          <div class="stat-value amber" id="stat-defpct">—</div>
+        <!-- Election tracker -->
+        <div class="election-card">
+          <div class="election-label">NEXT ELECTION</div>
+          <div class="election-value" id="pol-election">—</div>
+          <div id="pol-election-type" style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#2a4a38;letter-spacing:1px;margin-top:3px;">—</div>
+        </div>
+        <!-- Political risk flag -->
+        <div style="margin-top:8px;" id="pol-risk-container"></div>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: MILITARY -->
+    <div class="tab-content" id="content-military">
+
+      <div class="panel-section">
+        <div class="section-title">Global Firepower</div>
+        <div class="military-rating">
+          <div class="rating-badge">
+            <span class="rating-number" id="mil-rank">—</span>
+          </div>
+          <div>
+            <div class="rating-title">Global Firepower Rank</div>
+            <div class="rating-sub" id="mil-sub">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Force Composition</div>
+        <div class="mini-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-val" id="mil-active">—</span>
+            <span class="mini-stat-label">Active</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-val" id="mil-aircraft">—</span>
+            <span class="mini-stat-label">Aircraft</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-val" id="mil-naval">—</span>
+            <span class="mini-stat-label">Naval</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Defence Budget</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Annual Budget</div>
+            <div class="stat-value amber" id="mil-budget">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">% of GDP</div>
+            <div class="stat-value amber" id="mil-gdppct">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Nuclear Status</div>
+        <div class="nuclear-warning" id="nuclear-warning" style="display:none">
+          <span class="nuclear-icon">☢</span>
+          <span class="nuclear-text" id="nuclear-text">CONFIRMED NUCLEAR STATE</span>
+        </div>
+        <div id="nuclear-none" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:#2a4a38;letter-spacing:1px;padding:4px 0;">
+          NO NUCLEAR CAPABILITY CONFIRMED
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 3: INTELLIGENCE -->
+    <div class="tab-content" id="content-intel">
+      <div class="panel-section" id="news-section">
+        <div id="news-container">
+          <div class="loading">// AWAITING COUNTRY SELECTION</div>
         </div>
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="section-title">Military Capability</div>
-      <div class="military-rating">
-        <div class="rating-badge">
-          <span class="rating-number" id="mil-rank">—</span>
+    <!-- TAB 4: ECONOMIC (placeholder) -->
+    <div class="tab-content" id="content-economic">
+      <div class="placeholder-section">
+        <div class="placeholder-icon">📊</div>
+        <div class="placeholder-text">
+          ECONOMIC INTELLIGENCE<br>
+          MODULE PENDING<br><br>
+          PHASE 5 DEPLOYMENT<br>
+          TRADE DATA // SANCTIONS<br>
+          INFLATION // FOREX<br>
+          COMING SOON
         </div>
-        <div>
-          <div class="rating-title">Global Firepower Rank</div>
-          <div class="rating-sub" id="mil-sub">—</div>
-        </div>
-      </div>
-      <div class="mini-stats">
-        <div class="mini-stat">
-          <span class="mini-stat-val" id="mil-active">—</span>
-          <span class="mini-stat-label">Active</span>
-        </div>
-        <div class="mini-stat">
-          <span class="mini-stat-val" id="mil-aircraft">—</span>
-          <span class="mini-stat-label">Aircraft</span>
-        </div>
-        <div class="mini-stat">
-          <span class="mini-stat-val" id="mil-naval">—</span>
-          <span class="mini-stat-label">Naval</span>
-        </div>
-      </div>
-      <div class="nuclear-warning" id="nuclear-warning" style="display:none">
-        <span class="nuclear-icon">☢</span>
-        <span class="nuclear-text" id="nuclear-text">CONFIRMED NUCLEAR STATE</span>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="section-title">Alliances & Blocs</div>
-      <div class="alliance-row" id="alliance-row">—</div>
-    </div>
-
-    <div class="panel-section">
-      <div class="section-title">Political</div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-label">Government</div>
-          <div class="stat-value" id="pol-gov" style="font-size:10px; font-family:'Rajdhani'">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Head of State</div>
-          <div class="stat-value" id="pol-party" style="font-size:10px; font-family:'Rajdhani'; color:#00aaff;">—</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel-section" id="news-section">
-      <div class="section-title">Top Stories</div>
-      <div id="news-container">
-        <div class="loading">// AWAITING COUNTRY SELECTION</div>
       </div>
     </div>
 
@@ -971,7 +1170,7 @@
       mx: { gov: 'Federal Republic',    leader: 'Claudia Sheinbaum' },
       ar: { gov: 'Federal Republic',    leader: 'Javier Milei' },
       id: { gov: 'Presidential Republic', leader: 'Prabowo Subianto' },
-      sg: ['UN','ASEAN','COMMONWEALTH'],
+      sg: { gov: 'Parliamentary Republic', leader: 'Lawrence Wong' },
       vn: { gov: 'One-Party Republic',  leader: 'Tô Lâm' },
       th: { gov: 'Constitutional Monarchy', leader: 'Paetongtarn Shinawatra' },
       mm: { gov: 'Military Junta',      leader: 'Min Aung Hlaing' },
@@ -982,6 +1181,168 @@
       af: { gov: 'Islamic Emirate',     leader: 'Hibatullah Akhundzada' },
       ye: { gov: 'Civil War / Divided', leader: 'Multiple Factions' },
       dz: { gov: 'Presidential Republic', leader: 'Abdelmadjid Tebboune' },
+    };
+
+    // Democracy Index (Freedom House / EIU hybrid, score out of 10, type label)
+    const DEMOCRACY_DATA = {
+      no:{score:9.8,type:'FULL DEMOCRACY'},    is:{score:9.7,type:'FULL DEMOCRACY'},
+      se:{score:9.5,type:'FULL DEMOCRACY'},    nz:{score:9.4,type:'FULL DEMOCRACY'},
+      fi:{score:9.4,type:'FULL DEMOCRACY'},    dk:{score:9.3,type:'FULL DEMOCRACY'},
+      ie:{score:9.1,type:'FULL DEMOCRACY'},    ca:{score:9.0,type:'FULL DEMOCRACY'},
+      au:{score:8.9,type:'FULL DEMOCRACY'},    nl:{score:8.9,type:'FULL DEMOCRACY'},
+      ch:{score:8.8,type:'FULL DEMOCRACY'},    at:{score:8.7,type:'FULL DEMOCRACY'},
+      gb:{score:8.5,type:'FULL DEMOCRACY'},    lu:{score:8.5,type:'FULL DEMOCRACY'},
+      de:{score:8.4,type:'FULL DEMOCRACY'},
+      jp:{score:8.3,type:'FULL DEMOCRACY'},    us:{score:7.9,type:'FLAWED DEMOCRACY'},
+      fr:{score:7.9,type:'FULL DEMOCRACY'},    es:{score:7.9,type:'FULL DEMOCRACY'},
+      pt:{score:7.8,type:'FULL DEMOCRACY'},    be:{score:7.7,type:'FULL DEMOCRACY'},
+      ee:{score:7.7,type:'FULL DEMOCRACY'},    it:{score:7.7,type:'FULL DEMOCRACY'},
+      cz:{score:7.6,type:'FULL DEMOCRACY'},    lv:{score:7.5,type:'FULL DEMOCRACY'},
+      lt:{score:7.5,type:'FULL DEMOCRACY'},    sl:{score:7.5,type:'FULL DEMOCRACY'},
+      si:{score:7.4,type:'FULL DEMOCRACY'},    sk:{score:7.2,type:'FLAWED DEMOCRACY'},
+      kr:{score:8.0,type:'FULL DEMOCRACY'},    tw:{score:7.9,type:'FULL DEMOCRACY'},
+      pl:{score:7.0,type:'FLAWED DEMOCRACY'},  gr:{score:7.3,type:'FLAWED DEMOCRACY'},
+      cl:{score:7.9,type:'FULL DEMOCRACY'},    uy:{score:8.4,type:'FULL DEMOCRACY'},
+      cr:{score:8.1,type:'FULL DEMOCRACY'},    za:{score:7.0,type:'FLAWED DEMOCRACY'},
+      in:{score:6.9,type:'FLAWED DEMOCRACY'},  br:{score:6.7,type:'FLAWED DEMOCRACY'},
+      ar:{score:6.7,type:'FLAWED DEMOCRACY'},  mx:{score:5.9,type:'HYBRID REGIME'},
+      ro:{score:6.5,type:'FLAWED DEMOCRACY'},  bg:{score:6.4,type:'FLAWED DEMOCRACY'},
+      hr:{score:6.5,type:'FLAWED DEMOCRACY'},  hu:{score:5.8,type:'HYBRID REGIME'},
+      rs:{score:5.6,type:'HYBRID REGIME'},     al:{score:5.9,type:'HYBRID REGIME'},
+      id:{score:6.3,type:'FLAWED DEMOCRACY'},  ph:{score:5.8,type:'HYBRID REGIME'},
+      sg:{score:6.2,type:'FLAWED DEMOCRACY'},  my:{score:5.2,type:'HYBRID REGIME'},
+      tn:{score:5.5,type:'HYBRID REGIME'},     ke:{score:5.1,type:'HYBRID REGIME'},
+      ng:{score:4.3,type:'HYBRID REGIME'},     gh:{score:6.4,type:'FLAWED DEMOCRACY'},
+      ug:{score:3.8,type:'AUTHORITARIAN'},     tz:{score:4.4,type:'HYBRID REGIME'},
+      ma:{score:4.9,type:'HYBRID REGIME'},     jo:{score:3.4,type:'AUTHORITARIAN'},
+      pk:{score:4.1,type:'HYBRID REGIME'},     ua:{score:5.6,type:'HYBRID REGIME'},
+      ge:{score:5.5,type:'HYBRID REGIME'},     am:{score:5.3,type:'HYBRID REGIME'},
+      md:{score:6.0,type:'FLAWED DEMOCRACY'},  tr:{score:4.4,type:'HYBRID REGIME'},
+      il:{score:7.0,type:'FLAWED DEMOCRACY'},  co:{score:5.8,type:'HYBRID REGIME'},
+      pe:{score:5.6,type:'HYBRID REGIME'},     bo:{score:5.0,type:'HYBRID REGIME'},
+      ec:{score:5.7,type:'HYBRID REGIME'},     ve:{score:2.1,type:'AUTHORITARIAN'},
+      ru:{score:2.2,type:'AUTHORITARIAN'},     by:{score:1.6,type:'AUTHORITARIAN'},
+      cn:{score:1.9,type:'AUTHORITARIAN'},     kp:{score:1.1,type:'AUTHORITARIAN'},
+      sa:{score:2.1,type:'AUTHORITARIAN'},     ae:{score:2.6,type:'AUTHORITARIAN'},
+      ir:{score:1.7,type:'AUTHORITARIAN'},     sy:{score:1.4,type:'AUTHORITARIAN'},
+      af:{score:0.5,type:'AUTHORITARIAN'},     ly:{score:1.7,type:'AUTHORITARIAN'},
+      ye:{score:1.9,type:'AUTHORITARIAN'},     az:{score:2.7,type:'AUTHORITARIAN'},
+      kz:{score:2.9,type:'AUTHORITARIAN'},     uz:{score:2.1,type:'AUTHORITARIAN'},
+      mm:{score:1.0,type:'AUTHORITARIAN'},     eg:{score:2.8,type:'AUTHORITARIAN'},
+      dz:{score:3.1,type:'AUTHORITARIAN'},     et:{score:3.4,type:'AUTHORITARIAN'},
+      sd:{score:2.0,type:'AUTHORITARIAN'},     cm:{score:2.8,type:'AUTHORITARIAN'},
+      cd:{score:1.8,type:'AUTHORITARIAN'},     so:{score:2.2,type:'AUTHORITARIAN'},
+      zw:{score:2.5,type:'AUTHORITARIAN'},     qa:{score:2.8,type:'AUTHORITARIAN'},
+      bh:{score:2.5,type:'AUTHORITARIAN'},     om:{score:2.9,type:'AUTHORITARIAN'},
+      kw:{score:3.5,type:'AUTHORITARIAN'},     vn:{score:1.8,type:'AUTHORITARIAN'},
+      la:{score:1.7,type:'AUTHORITARIAN'},     th:{score:4.5,type:'HYBRID REGIME'},
+      kh:{score:1.5,type:'AUTHORITARIAN'},     
+    };
+
+    // Election tracker: next scheduled election + type
+    const ELECTION_DATA = {
+      us: { next: '2026', type: 'MIDTERM ELECTIONS' },
+      gb: { next: '2029', type: 'GENERAL ELECTION' },
+      fr: { next: '2027', type: 'PRESIDENTIAL ELECTION' },
+      de: { next: '2025', type: 'FEDERAL ELECTION', soon: true },
+      ru: { next: '2030', type: 'PRESIDENTIAL ELECTION' },
+      cn: { next: 'N/A',  type: 'ONE-PARTY STATE' },
+      in: { next: '2029', type: 'GENERAL ELECTION' },
+      jp: { next: '2025', type: 'UPPER HOUSE ELECTION', soon: true },
+      kr: { next: '2027', type: 'PRESIDENTIAL ELECTION' },
+      br: { next: '2026', type: 'GENERAL ELECTION' },
+      ca: { next: '2025', type: 'FEDERAL ELECTION', soon: true },
+      au: { next: '2025', type: 'FEDERAL ELECTION', soon: true },
+      it: { next: '2027', type: 'GENERAL ELECTION' },
+      es: { next: '2027', type: 'GENERAL ELECTION' },
+      tr: { next: '2028', type: 'PRESIDENTIAL ELECTION' },
+      sa: { next: 'N/A',  type: 'ABSOLUTE MONARCHY' },
+      il: { next: '2026', type: 'KNESSET ELECTION' },
+      ir: { next: '2029', type: 'PRESIDENTIAL ELECTION' },
+      pk: { next: '2029', type: 'GENERAL ELECTION' },
+      ua: { next: 'TBD',  type: 'WARTIME — SUSPENDED', overdue: true },
+      pl: { next: '2027', type: 'PRESIDENTIAL ELECTION' },
+      nl: { next: '2029', type: 'GENERAL ELECTION' },
+      se: { next: '2026', type: 'GENERAL ELECTION' },
+      no: { next: '2025', type: 'PARLIAMENTARY ELECTION', soon: true },
+      fi: { next: '2027', type: 'PRESIDENTIAL ELECTION' },
+      dk: { next: '2027', type: 'GENERAL ELECTION' },
+      gr: { next: '2027', type: 'GENERAL ELECTION' },
+      kp: { next: 'N/A',  type: 'ONE-PARTY STATE' },
+      eg: { next: '2030', type: 'PRESIDENTIAL ELECTION' },
+      ng: { next: '2027', type: 'GENERAL ELECTION' },
+      za: { next: '2029', type: 'GENERAL ELECTION' },
+      mx: { next: '2030', type: 'PRESIDENTIAL ELECTION' },
+      ar: { next: '2025', type: 'MIDTERM ELECTIONS', soon: true },
+      id: { next: '2029', type: 'GENERAL ELECTION' },
+      vn: { next: '2026', type: 'PARTY CONGRESS' },
+      th: { next: '2027', type: 'GENERAL ELECTION' },
+      mm: { next: 'TBD',  type: 'MILITARY JUNTA — SUSPENDED', overdue: true },
+      by: { next: '2025', type: 'PARLIAMENTARY ELECTION', soon: true },
+      ve: { next: '2030', type: 'PRESIDENTIAL ELECTION' },
+      sy: { next: 'TBD',  type: 'TRANSITIONAL PERIOD', overdue: true },
+      ly: { next: 'TBD',  type: 'CIVIL WAR — SUSPENDED', overdue: true },
+      af: { next: 'N/A',  type: 'ISLAMIC EMIRATE' },
+      ye: { next: 'TBD',  type: 'CIVIL WAR — SUSPENDED', overdue: true },
+      dz: { next: '2029', type: 'PRESIDENTIAL ELECTION' },
+      ma: { next: '2026', type: 'PARLIAMENTARY ELECTION' },
+      ke: { next: '2027', type: 'GENERAL ELECTION' },
+      et: { next: '2026', type: 'GENERAL ELECTION' },
+      tw: { next: '2028', type: 'PRESIDENTIAL ELECTION' },
+      sg: { next: '2025', type: 'GENERAL ELECTION', soon: true },
+      ph: { next: '2028', type: 'GENERAL ELECTION' },
+      my: { next: '2027', type: 'GENERAL ELECTION' },
+      bd: { next: '2029', type: 'GENERAL ELECTION' },
+      kz: { next: '2029', type: 'PRESIDENTIAL ELECTION' },
+      ge: { next: '2028', type: 'PARLIAMENTARY ELECTION' },
+      az: { next: '2030', type: 'PRESIDENTIAL ELECTION' },
+      rs: { next: '2027', type: 'GENERAL ELECTION' },
+      hr: { next: '2027', type: 'PARLIAMENTARY ELECTION' },
+      ro: { next: '2028', type: 'PRESIDENTIAL ELECTION' },
+      bg: { next: '2027', type: 'PARLIAMENTARY ELECTION' },
+      hu: { next: '2026', type: 'GENERAL ELECTION' },
+      cz: { next: '2025', type: 'PARLIAMENTARY ELECTION', soon: true },
+      sk: { next: '2027', type: 'PARLIAMENTARY ELECTION' },
+      cl: { next: '2025', type: 'PRESIDENTIAL ELECTION', soon: true },
+      co: { next: '2026', type: 'CONGRESSIONAL ELECTION' },
+      pe: { next: '2026', type: 'GENERAL ELECTION' },
+      jo: { next: '2027', type: 'PARLIAMENTARY ELECTION' },
+      lb: { next: '2026', type: 'PARLIAMENTARY ELECTION' },
+      iq: { next: '2025', type: 'PARLIAMENTARY ELECTION', soon: true },
+    };
+
+    // Political risk flags
+    const POLITICAL_RISK = {
+      ua: { label: '⚠ ACTIVE WAR', cls: 'critical' },
+      sy: { label: '⚠ POST-CONFLICT TRANSITION', cls: 'critical' },
+      ly: { label: '⚠ CIVIL WAR / DIVIDED STATE', cls: 'critical' },
+      ye: { label: '⚠ ACTIVE CIVIL WAR', cls: 'critical' },
+      af: { label: '⚠ AUTHORITARIAN TAKEOVER', cls: 'critical' },
+      kp: { label: '⚠ ISOLATED DICTATORSHIP', cls: 'critical' },
+      mm: { label: '⚠ MILITARY COUP / JUNTA', cls: 'critical' },
+      sd: { label: '⚠ ACTIVE CONFLICT', cls: 'critical' },
+      ru: { label: '⚠ WAR ECONOMY / SANCTIONS', cls: 'high' },
+      ir: { label: '⚠ INTERNATIONAL SANCTIONS', cls: 'high' },
+      by: { label: '⚠ AUTHORITARIAN / SANCTIONS', cls: 'high' },
+      ve: { label: '⚠ ECONOMIC COLLAPSE', cls: 'high' },
+      il: { label: '⚠ ACTIVE MILITARY OPERATIONS', cls: 'high' },
+      iq: { label: '⚠ ELEVATED INSTABILITY', cls: 'high' },
+      et: { label: '⚠ INTERNAL CONFLICT', cls: 'high' },
+      ml: { label: '⚠ COUP / JUNTA RULE', cls: 'high' },
+      tr: { label: '▲ DEMOCRATIC BACKSLIDING', cls: 'moderate' },
+      hu: { label: '▲ DEMOCRATIC BACKSLIDING', cls: 'moderate' },
+      pk: { label: '▲ POLITICAL INSTABILITY', cls: 'moderate' },
+      lb: { label: '▲ STATE COLLAPSE RISK', cls: 'moderate' },
+      eg: { label: '▲ AUTHORITARIAN CONSOLIDATION', cls: 'moderate' },
+      cn: { label: '▲ ONE-PARTY AUTHORITARIAN', cls: 'moderate' },
+      sa: { label: '▲ ABSOLUTE MONARCHY', cls: 'moderate' },
+      ng: { label: '▲ INSURGENCY / INSTABILITY', cls: 'moderate' },
+      ar: { label: '▲ ECONOMIC RESTRUCTURING', cls: 'moderate' },
+      mx: { label: '▲ CARTEL / SECURITY CRISIS', cls: 'moderate' },
+      de: { label: '🗳 ELECTION YEAR', cls: 'stable' },
+      fr: { label: '● STABLE DEMOCRACY', cls: 'stable' },
+      gb: { label: '● STABLE DEMOCRACY', cls: 'stable' },
+      us: { label: '● STABLE DEMOCRACY', cls: 'stable' },
     };
 
     // ─── STABILITY SCORING ──────────────────────────────────────────────────────
@@ -1103,11 +1464,23 @@
     function openPanel() {
       document.getElementById('country-panel').classList.add('open');
       document.getElementById('map').classList.add('panel-open');
+      resetTabs();
     }
 
     function closePanel() {
       document.getElementById('country-panel').classList.remove('open');
       document.getElementById('map').classList.remove('panel-open');
+    }
+
+    function switchTab(tab) {
+      ['overview','military','intel','economic'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+        document.getElementById(`content-${t}`).classList.toggle('active', t === tab);
+      });
+    }
+
+    function resetTabs() {
+      switchTab('overview');
     }
 
     // ─── COUNTRY CLICK HANDLER ──────────────────────────────────────────────────
@@ -1125,19 +1498,26 @@
       document.getElementById('panel-sub').textContent = `${iso.toUpperCase()} // FETCHING DATA...`;
       document.getElementById('stability-bar').style.width = '0%';
       document.getElementById('stability-val').textContent = '—';
-      ['stat-pop','stat-gdp','stat-def','stat-defpct','mil-rank','mil-active','mil-aircraft','mil-naval'].forEach(id => {
+      ['stat-pop','stat-gdp','stat-def','stat-defpct','mil-rank','mil-active','mil-aircraft','mil-naval','mil-budget','mil-gdppct'].forEach(id => {
         document.getElementById(id).textContent = '—';
       });
       document.getElementById('mil-sub').textContent = 'FETCHING...';
       document.getElementById('nuclear-warning').style.display = 'none';
+      document.getElementById('nuclear-none').style.display = 'block';
       document.getElementById('alliance-row').innerHTML = '<span style="color:#2a4a38;font-family:Share Tech Mono,monospace;font-size:9px;">LOADING...</span>';
       document.getElementById('pol-gov').textContent = '—';
       document.getElementById('pol-party').textContent = '—';
+      document.getElementById('pol-demo-bar').style.width = '0%';
+      document.getElementById('pol-demo-label').textContent = '—';
+      document.getElementById('pol-demo-score').textContent = '—';
+      document.getElementById('pol-election').textContent = '—';
+      document.getElementById('pol-election-type').textContent = '—';
+      document.getElementById('pol-risk-container').innerHTML = '';
       document.getElementById('news-container').innerHTML = '<div class="loading">// FETCHING INTELLIGENCE...</div>';
 
       openPanel();
 
-      // ── Military data (static) ──
+      // ── Military (static) ──
       const mil = MILITARY_DATA[iso];
       if (mil) {
         document.getElementById('mil-rank').textContent = '#' + mil.rank;
@@ -1148,14 +1528,12 @@
       } else {
         document.getElementById('mil-rank').textContent = 'N/A';
         document.getElementById('mil-sub').textContent = 'DATA UNAVAILABLE';
-        document.getElementById('mil-active').textContent = '—';
-        document.getElementById('mil-aircraft').textContent = '—';
-        document.getElementById('mil-naval').textContent = '—';
       }
 
       // ── Nuclear ──
       if (NUCLEAR_STATES[iso]) {
         document.getElementById('nuclear-warning').style.display = 'flex';
+        document.getElementById('nuclear-none').style.display = 'none';
         document.getElementById('nuclear-text').textContent = NUCLEAR_STATES[iso];
       }
 
@@ -1171,6 +1549,8 @@
       if (def) {
         document.getElementById('stat-def').textContent = '$' + def.budget + 'B';
         document.getElementById('stat-defpct').textContent = def.pct.toFixed(1) + '%';
+        document.getElementById('mil-budget').textContent = '$' + def.budget + 'B';
+        document.getElementById('mil-gdppct').textContent = def.pct.toFixed(1) + '%';
       }
 
       // ── Political (static) ──
@@ -1178,6 +1558,36 @@
       if (pol && pol.gov) {
         document.getElementById('pol-gov').textContent = pol.gov;
         document.getElementById('pol-party').textContent = pol.leader;
+      }
+
+      // ── Democracy Index ──
+      const demo = DEMOCRACY_DATA[iso];
+      if (demo) {
+        const pct = (demo.score / 10) * 100;
+        const demoColour = demo.score >= 8 ? '#00ff88' : demo.score >= 6 ? '#aaff44' : demo.score >= 4 ? '#ffaa00' : demo.score >= 2 ? '#ff6600' : '#ff3333';
+        const bar = document.getElementById('pol-demo-bar');
+        bar.style.width = pct + '%';
+        bar.style.background = demoColour;
+        document.getElementById('pol-demo-label').textContent = demo.type;
+        document.getElementById('pol-demo-label').style.color = demoColour;
+        document.getElementById('pol-demo-score').textContent = demo.score.toFixed(1);
+        document.getElementById('pol-demo-score').style.color = demoColour;
+      }
+
+      // ── Election Tracker ──
+      const elec = ELECTION_DATA[iso];
+      if (elec) {
+        const elEl = document.getElementById('pol-election');
+        elEl.textContent = elec.next;
+        elEl.className = 'election-value' + (elec.soon ? ' soon' : elec.overdue ? ' overdue' : '');
+        document.getElementById('pol-election-type').textContent = elec.type;
+      }
+
+      // ── Political Risk Flag ──
+      const risk = POLITICAL_RISK[iso];
+      if (risk) {
+        document.getElementById('pol-risk-container').innerHTML =
+          `<div class="risk-flag ${risk.cls}">${risk.label}</div>`;
       }
 
       // ── REST Countries API → then World Bank GDP ──
