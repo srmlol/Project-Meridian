@@ -1253,55 +1253,165 @@
       return Math.floor(diff / 86400) + 'D AGO';
     }
 
+    // Domestic sources by ISO — English-language outlets only
+    const DOMESTIC_SOURCES = {
+      us: { domains: 'nytimes.com,washingtonpost.com,wsj.com,apnews.com,npr.org,politico.com' },
+      gb: { domains: 'bbc.co.uk,theguardian.com,telegraph.co.uk,thetimes.co.uk,independent.co.uk' },
+      au: { domains: 'abc.net.au,smh.com.au,theaustralian.com.au,news.com.au' },
+      ca: { domains: 'cbc.ca,globeandmail.com,nationalpost.com,thestar.com' },
+      nz: { domains: 'nzherald.co.nz,stuff.co.nz,rnz.co.nz' },
+      ie: { domains: 'rte.ie,irishtimes.com,independent.ie' },
+      in: { domains: 'thehindu.com,hindustantimes.com,ndtv.com,timesofindia.indiatimes.com' },
+      za: { domains: 'dailymaverick.co.za,news24.com,timeslive.co.za,bdlive.co.za' },
+      ng: { domains: 'punchng.com,vanguardngr.com,theguardian.ng,premiumtimesng.com' },
+      ke: { domains: 'nation.africa,standardmedia.co.ke,businessdailyafrica.com' },
+      gh: { domains: 'myjoyonline.com,graphic.com.gh,ghanaweb.com' },
+      pk: { domains: 'dawn.com,geo.tv,thenews.com.pk,tribune.com.pk' },
+      bd: { domains: 'thedailystar.net,dhakatribune.com,bdnews24.com' },
+      lk: { domains: 'dailymirror.lk,sundaytimes.lk,island.lk' },
+      np: { domains: 'kathmandupost.com,myrepublica.nagariknetwork.com' },
+      sg: { domains: 'straitstimes.com,channelnewsasia.com,todayonline.com' },
+      my: { domains: 'malaymail.com,freemalaysiatoday.com,malaysiakini.com' },
+      ph: { domains: 'rappler.com,inquirer.net,philstar.com' },
+      hk: { domains: 'scmp.com,hongkongfp.com' },
+      tw: { domains: 'taipeitimes.com,focustaiwan.tw' },
+      il: { domains: 'haaretz.com,timesofisrael.com,jpost.com' },
+      jo: { domains: 'jordantimes.com,arabnews.com' },
+      ae: { domains: 'thenationalnews.com,gulfnews.com,khaleejtimes.com' },
+      sa: { domains: 'arabnews.com,saudigazette.com.sa' },
+      qa: { domains: 'aljazeera.com,thepeninsulaqatar.com' },
+      kw: { domains: 'arabtimesonline.com,kuwaittimes.com' },
+      eg: { domains: 'egyptindependent.com,madamasr.com,ahramonline.org' },
+      ma: { domains: 'moroccoworldnews.com,theafricareport.com' },
+      et: { domains: 'addisstandard.com,thereporterethiopia.com' },
+      tz: { domains: 'thecitizen.co.tz,dailynews.co.tz' },
+      ug: { domains: 'monitor.co.ug,newvision.co.ug' },
+      zw: { domains: 'thezimbabwean.co,newzimbabwe.com' },
+      mw: { domains: 'mwnation.com,nyasatimes.com' },
+      ua: { domains: 'kyivindependent.com,ukrinform.net,pravda.com.ua' },
+      ru: { domains: 'rt.com,themoscowtimes.com' },
+      tr: { domains: 'hurriyetdailynews.com,dailysabah.com' },
+      ir: { domains: 'tehrantimes.com,irna.ir' },
+      iq: { domains: 'rudaw.net,iraqinews.com' },
+      sy: { domains: 'syriahr.com,syriadirect.org' },
+      af: { domains: 'tolonews.com,pajhwok.com' },
+      mm: { domains: 'irrawaddy.com,mizzima.com' },
+      kp: { domains: 'nknews.org,rfa.org' },
+      kr: { domains: 'koreaherald.com,koreatimes.co.kr,koreajoongangdaily.joins.com' },
+      jp: { domains: 'japantimes.co.jp,nhk.or.jp,asahi.com' },
+      cn: { domains: 'scmp.com,sixthtone.com,chinadialogue.net' },
+      id: { domains: 'thejakartapost.com,kompas.com' },
+      vn: { domains: 'vnexpress.net,vietnamnews.vn,tuoitrenews.vn' },
+      th: { domains: 'bangkokpost.com,nationthailand.com' },
+      kh: { domains: 'phnompenhpost.com,khmertimeskh.com' },
+      fr: { domains: 'france24.com,thelocal.fr' },
+      de: { domains: 'dw.com,thelocal.de' },
+      es: { domains: 'elpais.com,thelocal.es' },
+      it: { domains: 'thelocal.it,ansa.it' },
+      nl: { domains: 'dutchnews.nl,nltimes.nl' },
+      se: { domains: 'thelocal.se,sverigesradio.se' },
+      no: { domains: 'thelocal.no,nrk.no' },
+      fi: { domains: 'yle.fi,helsinkitimes.fi' },
+      dk: { domains: 'thelocal.dk,dr.dk' },
+      pl: { domains: 'notesfrompoland.com,polanddaily.com' },
+      cz: { domains: 'radio.cz,praguemorning.cz' },
+      hu: { domains: 'dailynewshungary.com,hungarytoday.hu' },
+      ro: { domains: 'romaniainsider.com,g4media.ro' },
+      gr: { domains: 'ekathimerini.com,protothema.gr' },
+      br: { domains: 'thebrazilinstitute.org,riotimesonline.com,braziljournal.com' },
+      ar: { domains: 'buenosairesherald.com,mercopress.com' },
+      mx: { domains: 'mexiconewsdaily.com,elfinanciero.com.mx' },
+      cl: { domains: 'santiagotimes.cl,mercopress.com' },
+      co: { domains: 'colombiareports.com,eltiempo.com' },
+      ve: { domains: 'venezuelanalysis.com,caracaschronicles.com' },
+      pe: { domains: 'perureports.com,livinginperu.com' },
+      by: { domains: 'belarusfeed.com,zerkalo.io' },
+      ge: { domains: 'civil.ge,agenda.ge' },
+      az: { domains: 'azernews.az,caliber.az' },
+      kz: { domains: 'astanatimes.com,kaztag.kz' },
+      uz: { domains: 'uznews.net,daryo.uz' },
+      rs: { domains: 'n1info.com,b92.net' },
+      hr: { domains: 'total-croatia-news.com,tportal.hr' },
+    };
+
+    function buildNewsItem(a) {
+      const tag = classifyArticle(a.title, a.description);
+      const ago = timeAgo(a.publishedAt);
+      const source = a.source.name ? a.source.name.toUpperCase() : 'UNKNOWN SOURCE';
+      const title = a.title.length > 90 ? a.title.substring(0, 90) + '…' : a.title;
+      const safeLink = a.url.replace(/'/g, '%27');
+      return `
+        <div class="news-item" onclick="window.open('${safeLink}','_blank')">
+          <span class="news-tag ${tag}">${tag.toUpperCase()}</span>
+          <div>
+            <div class="news-text">${title}</div>
+            <span class="news-time">${source} // ${ago}</span>
+          </div>
+        </div>`;
+    }
+
+    function newsSubheader(label) {
+      return `<div style="font-family:'Share Tech Mono',monospace;font-size:8px;color:#2a4a38;letter-spacing:3px;padding:10px 0 6px;border-bottom:1px solid #0d2a1a;margin-bottom:4px;">${label}</div>`;
+    }
+
+    function proxyFetch(apiUrl) {
+      const proxied = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+      return fetch(proxied).then(r => r.json()).then(w => JSON.parse(w.contents));
+    }
+
     function fetchNews(countryName, iso) {
       document.getElementById('news-container').innerHTML = '<div class="loading">// INTERCEPTING SIGNALS...</div>';
 
-      // Build a targeted query: country name + geopolitical keywords
-      const query = encodeURIComponent(`"${countryName}"`);
-      const newsUrl = `https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=8&language=en&apiKey=${NEWS_API_KEY}`;
-      const url = `https://api.allorigins.win/get?url=${encodeURIComponent(newsUrl)}`;
+      const hasDomestic = !!DOMESTIC_SOURCES[iso];
 
-      fetch(url)
-        .then(r => r.json())
-        .then(wrapper => {
-          const data = JSON.parse(wrapper.contents);
-          if (!data.articles || data.articles.length === 0) {
-            document.getElementById('news-container').innerHTML =
-              '<div class="loading">// NO SIGNALS DETECTED</div>';
-            return;
-          }
+      // Global feed — country name + geopolitical keywords
+      const globalQuery = encodeURIComponent(`"${countryName}" (government OR military OR economy OR politics OR conflict OR election)`);
+      const globalUrl = `https://newsapi.org/v2/everything?q=${globalQuery}&sortBy=publishedAt&pageSize=5&language=en&apiKey=${NEWS_API_KEY}`;
 
-          // Filter out articles with removed/null content
-          const articles = data.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 6);
+      // Domestic feed — known English-language sources for this country
+      const domSources = hasDomestic ? DOMESTIC_SOURCES[iso].domains : null;
+      const domQuery = encodeURIComponent(`"${countryName}"`);
+      const domUrl = hasDomestic
+        ? `https://newsapi.org/v2/everything?q=${domQuery}&domains=${domSources}&sortBy=publishedAt&pageSize=5&language=en&apiKey=${NEWS_API_KEY}`
+        : null;
 
-          if (articles.length === 0) {
-            document.getElementById('news-container').innerHTML =
-              '<div class="loading">// NO SIGNALS DETECTED</div>';
-            return;
-          }
+      const fetches = [proxyFetch(globalUrl)];
+      if (domUrl) fetches.push(proxyFetch(domUrl));
 
-          const html = articles.map(a => {
-            const tag = classifyArticle(a.title, a.description);
-            const ago = timeAgo(a.publishedAt);
-            const source = a.source.name ? a.source.name.toUpperCase() : 'UNKNOWN SOURCE';
-            const title = a.title.length > 90 ? a.title.substring(0, 90) + '…' : a.title;
-            const link = a.url;
-            return `
-              <div class="news-item" onclick="window.open('${link}','_blank')">
-                <span class="news-tag ${tag}">${tag.toUpperCase()}</span>
-                <div>
-                  <div class="news-text">${title}</div>
-                  <span class="news-time">${source} // ${ago}</span>
-                </div>
-              </div>`;
-          }).join('');
+      Promise.allSettled(fetches).then(results => {
+        const globalData = results[0].status === 'fulfilled' ? results[0].value : null;
+        const domData    = results[1] && results[1].status === 'fulfilled' ? results[1].value : null;
 
-          document.getElementById('news-container').innerHTML = html;
-        })
-        .catch(() => {
-          document.getElementById('news-container').innerHTML =
-            '<div class="loading">// FEED INTERRUPTED</div>';
-        });
+        const globalArticles = globalData && globalData.articles
+          ? globalData.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 4)
+          : [];
+
+        const domArticles = domData && domData.articles
+          ? domData.articles.filter(a => a.title && a.title !== '[Removed]').slice(0, 4)
+          : [];
+
+        let html = '';
+
+        // Global section
+        html += newsSubheader('// GLOBAL INTELLIGENCE');
+        if (globalArticles.length > 0) {
+          html += globalArticles.map(buildNewsItem).join('');
+        } else {
+          html += '<div class="loading" style="padding:10px 0;">// NO GLOBAL SIGNALS</div>';
+        }
+
+        // Domestic section
+        html += newsSubheader('// DOMESTIC FEED');
+        if (domArticles.length > 0) {
+          html += domArticles.map(buildNewsItem).join('');
+        } else if (!hasDomestic) {
+          html += '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#2a4a38;letter-spacing:1px;padding:8px 0;">NO DOMESTIC ENGLISH FEED AVAILABLE</div>';
+        } else {
+          html += '<div class="loading" style="padding:10px 0;">// NO DOMESTIC SIGNALS</div>';
+        }
+
+        document.getElementById('news-container').innerHTML = html;
+      });
     }
 
     // ─── GEOJSON + HEATMAP ──────────────────────────────────────────────────────
